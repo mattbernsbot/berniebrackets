@@ -1,0 +1,319 @@
+2026-03-16 01:21:01 - bracket_optimizer - INFO - Running full pipeline
+2026-03-16 01:21:01 - bracket_optimizer - INFO - Cleared previous run data (preserved real bracket)
+2026-03-16 01:21:01 - bracket_optimizer - INFO - Running data collection pipeline
+2026-03-16 01:21:01 - bracket_optimizer - INFO - Found real bracket - loading from ncaa.com data
+2026-03-16 01:21:01 - bracket_optimizer - INFO - Scraping KenPom from: https://kenpom.com
+2026-03-16 01:21:02 - bracket_optimizer - INFO - Parsing 385 rows from KenPom table
+2026-03-16 01:21:02 - bracket_optimizer - INFO - Successfully parsed 365 teams from KenPom
+2026-03-16 01:21:02 - bracket_optimizer - INFO - Scraped 365 teams from KenPom
+2026-03-16 01:21:02 - bracket_optimizer - INFO - Launching Playwright to scrape ESPN picks for 2026...
+2026-03-16 01:21:02 - bracket_optimizer - INFO - Navigating to main bracket entry page: https://fantasy.espn.com/tournament-challenge-bracket/2026/en/entry
+2026-03-16 01:21:04 - bracket_optimizer - INFO - Captured ESPN API: https://gambit-api.fantasy.espn.com/apis/v1/challenges/tournament-challenge-bracket-2026/?platform=chui&view=chui_default
+2026-03-16 01:21:11 - bracket_optimizer - INFO - Navigating to whopickedwhom: https://fantasy.espn.com/tournament-challenge-bracket/2026/en/whopickedwhom
+2026-03-16 01:21:11 - bracket_optimizer - INFO - Captured ESPN API: https://gambit-api.fantasy.espn.com/apis/v1/challenges/tournament-challenge-bracket-2026/?platform=chui&view=chui_default
+2026-03-16 01:21:26 - bracket_optimizer - WARNING - Page load timeout or error: Page.goto: Timeout 15000ms exceeded.
+Call log:
+  - navigating to "https://fantasy.espn.com/tournament-challenge-bracket/2026/en/whopickedwhom", waiting until "networkidle"
+
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Saved raw ESPN API response to data/espn_api_raw_2026.json
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Parsed ESPN picks for rounds: [1]
+2026-03-16 01:21:26 - bracket_optimizer - INFO -   R1: 64 teams
+2026-03-16 01:21:26 - bracket_optimizer - INFO -   Duke: R1=98.0% R2=83.3% R3=63.7% R6=14.7%
+2026-03-16 01:21:26 - bracket_optimizer - INFO -   Arizona: R1=97.4% R2=82.8% R3=63.3% R6=14.6%
+2026-03-16 01:21:26 - bracket_optimizer - INFO -   Illinois: R1=92.3% R2=78.4% R3=60.0% R6=13.8%
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Built pick percentages for 60 teams
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Cached ESPN picks to data/espn_picks_cache.json
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Saved snapshot to data/espn_picks_snapshots/espn_picks_2026_2026-03-16T012126Z.json
+2026-03-16 01:21:26 - bracket_optimizer - INFO - ✓ Successfully scraped ESPN picks for 60 teams
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Saved 68 teams to data/teams.json
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Saved bracket structure to data/bracket_structure.json
+2026-03-16 01:21:26 - bracket_optimizer - INFO - ✓ ESPN pick data collected for 60 teams
+2026-03-16 01:21:26 - bracket_optimizer - INFO - ✓ Collected data for 68 teams
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Running analysis pipeline
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Loaded 68 teams and bracket structure
+2026-03-16 01:21:26 - bracket_optimizer - INFO - === Starting matchup analysis ===
+2026-03-16 01:21:26 - bracket_optimizer - INFO - Building matchup matrix for 68 teams
+2026-03-16 01:21:27 - bracket_optimizer - INFO - Loaded ensemble upset model successfully
+2026-03-16 01:23:36 - bracket_optimizer - INFO - Computed 2278 unique matchup probabilities
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Saved matchup matrix to data/matchup_probabilities.json
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === Matchup analysis complete ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === Starting ownership analysis ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - No public picks file found - using seed-based estimation
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Building ownership profiles for 68 teams
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Built 68 ownership profiles
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Saved ownership profiles to data/ownership.json
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === Ownership analysis complete ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Estimating title probabilities with 2000 simulations
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Title probability estimation complete. Top 5:
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Duke: 21.4%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Arizona: 15.6%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Michigan: 13.2%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Florida: 9.8%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Purdue: 7.4%
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Updating ownership profiles with model-based leverage
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Leverage update complete
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Updated and saved ownership profiles with leverage scores
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === Starting bracket optimization (V2) ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Pool size: 25, Sim count: 200
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === COMPONENT 1: Evaluating champion candidates ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Estimating title probabilities with 2000 simulations
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Title probability estimation complete. Top 5:
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Duke: 21.4%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Arizona: 15.6%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Michigan: 13.2%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Florida: 9.8%
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Purdue: 7.4%
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Min title probability threshold for pool size 25: 8.0%
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Champion evaluation complete. Top 4 candidates:
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   1. Duke (1-seed): title_prob=21.4%, adjusted_value=0.0091
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   2. Arizona (1-seed): title_prob=15.6%, adjusted_value=0.0054
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   3. Michigan (1-seed): title_prob=13.2%, adjusted_value=0.0050
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   4. Florida (1-seed): title_prob=9.8%, adjusted_value=0.0027
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === COMPONENT 2: Generating scenarios ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Generated 6 scenarios
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   chalk_0: champion=Duke, chaos=low
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   chalk_1: champion=Duke, chaos=low
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   contrarian_0: champion=Arizona, chaos=medium
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   contrarian_1: champion=Michigan, chaos=medium
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   chaos_0: champion=Arizona, chaos=high
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   chaos_1: champion=Michigan, chaos=high
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: chalk_0
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=low
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 8 EMV-based R1 upsets (target: 6-8)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: SMU over Virginia, EMV=5.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Texas Tech over Alabama, EMV=4.10
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Michigan St. over UConn, EMV=7.64
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Houston over Illinois, EMV=6.40
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 6 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: chalk_1
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=low
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 8 EMV-based R1 upsets (target: 6-8)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: SMU over Virginia, EMV=5.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Texas Tech over Alabama, EMV=4.10
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Michigan St. over UConn, EMV=7.64
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 5 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: contrarian_0
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=medium
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: NC State (11) over BYU (6), EMV=-0.41
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Wright St. (14) over Virginia (3), EMV=-0.70
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 10 EMV-based R1 upsets (target: 8-10)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: NC State over Gonzaga, EMV=5.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Texas Tech over Alabama, EMV=4.10
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Michigan St. over UConn, EMV=7.64
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: SMU over Iowa St., EMV=-1.51
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 6 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: contrarian_1
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=medium
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: NC State (11) over BYU (6), EMV=-0.41
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Wright St. (14) over Virginia (3), EMV=-0.70
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 10 EMV-based R1 upsets (target: 8-10)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: NC State over Gonzaga, EMV=5.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Texas Tech over Alabama, EMV=4.10
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Michigan St. over UConn, EMV=7.64
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: SMU over Iowa St., EMV=-1.51
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 6 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: chaos_0
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=high
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Troy (13) over Nebraska (4), EMV=-0.37
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: NC State (11) over BYU (6), EMV=-0.41
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Wright St. (14) over Virginia (3), EMV=-0.70
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Saint Louis (9) over Georgia (8), EMV=-1.12
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Missouri (10) over Miami (FL) (7), EMV=-1.54
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 13 EMV-based R1 upsets (target: 10-13)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: NC State over Gonzaga, EMV=5.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: South Florida over Michigan St., EMV=-0.89
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: South Florida over UConn, EMV=1.67
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: SMU over Iowa St., EMV=-1.51
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 6 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructing bracket for scenario: chaos_1
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating upsets for chaos_level=high
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Iowa (9) over Clemson (8), EMV=0.55
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Utah St. (9) over Villanova (8), EMV=-0.14
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Santa Clara (10) over Kentucky (7), EMV=1.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: SMU (11) over Tennessee (6), EMV=1.25
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: VCU (11) over North Carolina (6), EMV=0.31
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Texas A&M (10) over Saint Mary's (7), EMV=-0.08
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: UCF (10) over UCLA (7), EMV=-0.19
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: South Florida (11) over Louisville (6), EMV=-0.34
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Troy (13) over Nebraska (4), EMV=-0.37
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: NC State (11) over BYU (6), EMV=-0.41
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Wright St. (14) over Virginia (3), EMV=-0.70
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Saint Louis (9) over Georgia (8), EMV=-1.12
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added upset: Missouri (10) over Miami (FL) (7), EMV=-1.54
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 13 EMV-based R1 upsets (target: 10-13)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Evaluating later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: NC State over Gonzaga, EMV=5.50
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Kansas over St. John's, EMV=5.06
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Texas Tech over Alabama, EMV=4.10
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R2 upset: Wisconsin over Arkansas, EMV=3.36
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: Michigan St. over UConn, EMV=7.64
+2026-03-16 01:23:37 - bracket_optimizer - INFO -     Added R3 upset: SMU over Iowa St., EMV=-1.51
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Added 6 later-round upsets (R2-R5)
+2026-03-16 01:23:37 - bracket_optimizer - INFO - Constructed 6 scenario-based brackets
+2026-03-16 01:23:37 - bracket_optimizer - INFO - === COMPONENT 5: Monte Carlo evaluation ===
+2026-03-16 01:23:37 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for chalk_0
+2026-03-16 01:23:38 - bracket_optimizer - INFO -     P(1st)=4.0%, P(top 3)=17.5%, E[finish]=8.6, E[score]=871.9
+2026-03-16 01:23:38 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for chalk_1
+2026-03-16 01:23:39 - bracket_optimizer - INFO -     P(1st)=8.0%, P(top 3)=21.5%, E[finish]=9.0, E[score]=863.9
+2026-03-16 01:23:39 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for contrarian_0
+2026-03-16 01:23:39 - bracket_optimizer - INFO -     P(1st)=4.5%, P(top 3)=13.0%, E[finish]=11.9, E[score]=771.9
+2026-03-16 01:23:39 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for contrarian_1
+2026-03-16 01:23:40 - bracket_optimizer - INFO -     P(1st)=3.5%, P(top 3)=15.0%, E[finish]=11.0, E[score]=804.2
+2026-03-16 01:23:40 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for chaos_0
+2026-03-16 01:23:41 - bracket_optimizer - INFO -     P(1st)=6.5%, P(top 3)=14.5%, E[finish]=15.2, E[score]=691.0
+2026-03-16 01:23:41 - bracket_optimizer - INFO -   Monte Carlo evaluation: 200 sims for chaos_1
+2026-03-16 01:23:42 - bracket_optimizer - INFO -     P(1st)=3.0%, P(top 3)=14.5%, E[finish]=11.5, E[score]=791.4
+2026-03-16 01:23:42 - bracket_optimizer - INFO - === COMPONENT 7: Selecting diverse output brackets ===
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Selected 3 brackets:
+2026-03-16 01:23:42 - bracket_optimizer - INFO -   Optimal: champion=Duke, P(1st)=8.0%, P(top 3)=21.5%
+2026-03-16 01:23:42 - bracket_optimizer - INFO -   Safe: champion=Arizona, P(1st)=6.5%, P(top 3)=14.5% (16 picks different from optimal)
+2026-03-16 01:23:42 - bracket_optimizer - INFO -   Aggressive: champion=Arizona, P(1st)=4.5%, P(top 3)=13.0% (7 picks different from optimal)
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Pipeline complete. Returning 3 optimized brackets.
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Saved 3 optimal brackets to data/optimal_brackets.json
+2026-03-16 01:23:42 - bracket_optimizer - INFO - ✓ Analysis complete
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Generating output files
+2026-03-16 01:23:42 - bracket_optimizer - INFO - === Generating output files ===
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Saved analysis to output/analysis.md
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Saved ASCII bracket to output/bracket.txt
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Saved summary to output/summary.json
+2026-03-16 01:23:42 - bracket_optimizer - INFO - === Output generation complete ===
+2026-03-16 01:23:42 - bracket_optimizer - INFO - ✓ Output generation complete
+2026-03-16 01:23:42 - bracket_optimizer - INFO - ✓ Full pipeline complete
+2026-03-16 01:23:42 - bracket_optimizer - INFO - Results available in output/
+Loaded 365 teams from KenPom
+Real bracket has 68 teams
+
+EAST:
+  ( 1) Duke                      = Duke                      AdjEM: 38.90
+  (16) Siena                     = Siena                     AdjEM: -2.10
+  ( 8) Ohio St.                  = Ohio St.                  AdjEM: 22.24
+  ( 9) TCU                       = TCU                       AdjEM: 17.59
+  ( 5) St. John's                = St. John's                AdjEM: 25.91
+  (12) Northern Iowa             = Northern Iowa             AdjEM: 11.81
+  ( 4) Kansas                    = Kansas                    AdjEM: 24.44
+  (13) Cal Baptist               = Cal Baptist               AdjEM:  5.99
+  ( 6) Louisville                = Louisville                AdjEM: 25.42
+  (11) South Florida             = South Florida             AdjEM: 16.39
+  ( 3) Michigan St.              = Michigan St.              AdjEM: 28.31
+  (14) North Dakota St.          = North Dakota St.          AdjEM:  5.13
+  ( 7) UCLA                      = UCLA                      AdjEM: 21.67
+  (10) UCF                       = UCF                       AdjEM: 15.04
+  ( 2) UConn                     = Connecticut               AdjEM: 27.87
+  (15) Furman                    = Furman                    AdjEM: -1.98
+
+WEST:
+  ( 1) Arizona                   = Arizona                   AdjEM: 37.66
+  (16) Long Island               = LIU                       AdjEM: -3.95
+  ( 8) Villanova                 = Villanova                 AdjEM: 19.97
+  ( 9) Utah St.                  = Utah St.                  AdjEM: 20.76
+  ( 5) Wisconsin                 = Wisconsin                 AdjEM: 23.39
+  (12) High Point                = High Point                AdjEM:  8.40
+  ( 4) Arkansas                  = Arkansas                  AdjEM: 26.05
+  (13) Hawaii                    = Hawaii                    AdjEM:  5.97
+  ( 6) BYU                       = BYU                       AdjEM: 23.25
+  ( 3) Gonzaga                   = Gonzaga                   AdjEM: 28.10
+  (14) Kennesaw St.              = Kennesaw St.              AdjEM:  0.57
+  ( 7) Miami (FL)                = Miami FL                  AdjEM: 20.68
+  (10) Missouri                  = Missouri                  AdjEM: 15.39
+  ( 2) Purdue                    = Purdue                    AdjEM: 31.20
+  (15) Queens (N.C.)             = Queens                    AdjEM: -1.44
+  (11) Texas                     = Texas                     AdjEM: 19.03
+  (11) NC State                  = N.C. State                AdjEM: 19.60
+
+SOUTH:
+  ( 1) Florida                   = Florida                   AdjEM: 33.79
+  ( 8) Clemson                   = Clemson                   AdjEM: 19.24
+  ( 9) Iowa                      = Iowa                      AdjEM: 22.44
+  ( 5) Vanderbilt                = Vanderbilt                AdjEM: 27.51
+  (12) McNeese                   = McNeese                   AdjEM: 12.48
+  ( 4) Nebraska                  = Nebraska                  AdjEM: 26.16
+  (13) Troy                      = Troy                      AdjEM:  1.72
+  ( 6) North Carolina            = North Carolina            AdjEM: 20.84
+  (11) VCU                       = VCU                       AdjEM: 17.21
+  ( 3) Illinois                  = Illinois                  AdjEM: 32.10
+  (14) Penn                      = Penn                      AdjEM:  1.47
+  ( 7) Saint Mary's              = Saint Mary's              AdjEM: 23.07
+  (10) Texas A&M                 = Texas A&M                 AdjEM: 18.67
+  ( 2) Houston                   = Houston                   AdjEM: 33.43
+  (15) Idaho                     = Idaho                     AdjEM:  1.53
+  (16) Prairie View A&M          = Prairie View A&M          AdjEM:-10.69
+  (16) Lehigh                    = Lehigh                    AdjEM:-10.37
+
+MIDWEST:
+  ( 1) Michigan                  = Michigan                  AdjEM: 37.59
+  ( 8) Georgia                   = Georgia                   AdjEM: 20.48
+  ( 9) Saint Louis               = Saint Louis               AdjEM: 18.32
+  ( 5) Texas Tech                = Texas Tech                AdjEM: 25.22
+  (12) Akron                     = Akron                     AdjEM: 12.80
+  ( 4) Alabama                   = Alabama                   AdjEM: 25.72
+  (13) Hofstra                   = Hofstra                   AdjEM:  9.49
+  ( 6) Tennessee                 = Tennessee                 AdjEM: 26.02
+  ( 3) Virginia                  = Virginia                  AdjEM: 26.71
+  (14) Wright St.                = Wright St.                AdjEM:  2.04
+  ( 7) Kentucky                  = Kentucky                  AdjEM: 21.48
+  (10) Santa Clara               = Santa Clara               AdjEM: 19.40
+  ( 2) Iowa St.                  = Iowa St.                  AdjEM: 32.42
+  (15) Tennessee St.             = Tennessee St.             AdjEM: -1.83
+  (16) UMBC                      = UMBC                      AdjEM: -1.67
+  (16) Howard                    = Howard                    AdjEM: -3.19
+  (11) Miami (Ohio)              = Miami OH                  AdjEM:  8.26
+  (11) SMU                       = SMU                       AdjEM: 18.09
+
+✅ Loaded 68 teams from real bracket
+   Matched: 68
+   Unmatched: 0

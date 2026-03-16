@@ -1,0 +1,15 @@
+{
+  "pool_size": 25,
+  "scoring": [10, 20, 40, 80, 160, 320],
+  "sim_count": 10000,
+  "risk_profile": "auto",
+  "champion_min_leverage": 1.5,
+  "min_contrarian_ff": 1,
+  "max_r1_upsets": 3,
+  "data_dir": "data",
+  "output_dir": "output",
+  "kenpom_url": "https://kenpom.com",
+  "espn_bracket_url": "https://www.espn.com/mens-college-basketball/bracketology",
+  "espn_picks_url": "https://fantasy.espn.com/tournament-challenge-bracket/",
+  "random_seed": null
+}

@@ -1,0 +1,17 @@
+# March Madness Bracket Optimizer - Python Dependencies
+
+# Core dependency
+beautifulsoup4>=4.12.0
+
+# Testing (already installed)
+pytest>=7.0.0
+
+# Note: All other functionality uses Python standard library only
+# - urllib (HTTP requests)
+# - json (data serialization)
+# - random (Monte Carlo simulation)
+# - statistics (aggregation)
+# - dataclasses (data models)
+# - typing (type hints)
+# - argparse (CLI)
+# - logging (structured logging)
