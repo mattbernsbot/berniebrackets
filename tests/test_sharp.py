@@ -204,11 +204,26 @@ class TestSharp(unittest.TestCase):
         # The formula is 1/(1+10^(-ΔEM/13)) which for ΔEM=10 gives ~84%
         # (vs ~87% with κ=11.5)
         prob = adj_em_to_win_prob(15.0, 5.0)
-        
+
         # Should be slightly compressed but still strong favorite
         self.assertGreater(prob, 0.80)
         self.assertLess(prob, 0.90)
 
+    def test_matchup_antisymmetry_1v16(self):
+        """P(1-seed beats 16) + P(16-seed beats 1) == 1.0."""
+        a = Team(name="Fav", seed=1, adj_em=28.0)
+        b = Team(name="Dog", seed=16, adj_em=-10.0)
+        m_ab = compute_matchup_probability(a, b)
+        m_ba = compute_matchup_probability(b, a)
+        self.assertAlmostEqual(m_ab.win_prob_a + m_ba.win_prob_a, 1.0, places=6)
+
+    def test_matchup_antisymmetry_5v12(self):
+        """P(5-seed beats 12) + P(12-seed beats 5) == 1.0."""
+        a = Team(name="Five", seed=5, adj_em=14.0)
+        b = Team(name="Twelve", seed=12, adj_em=6.0)
+        m_ab = compute_matchup_probability(a, b)
+        m_ba = compute_matchup_probability(b, a)
+        self.assertAlmostEqual(m_ab.win_prob_a + m_ba.win_prob_a, 1.0, places=6)
 
 if __name__ == '__main__':
     unittest.main()

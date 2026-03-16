@@ -17,7 +17,7 @@ from src.models import (
 )
 from src.utils import save_json
 from src.constants import (
-    UPSET_ADVANCEMENT_RATE, SEED_OWNERSHIP_CURVES, CHAMPION_MIN_TITLE_PROB,
+    UPSET_ADVANCEMENT_RATE, SEED_OWNERSHIP_CURVES,
     HISTORICAL_SEED_WIN_RATES
 )
 
@@ -37,19 +37,6 @@ def assign_confidence_tier(win_prob: float) -> str:
     else:
         return "🎲 Gamble"
 
-
-def get_min_title_prob_threshold(pool_size: int) -> float:
-    """Return minimum title probability threshold for champion candidates."""
-    if pool_size <= 10:
-        return CHAMPION_MIN_TITLE_PROB["tiny"]
-    elif pool_size <= 25:
-        return CHAMPION_MIN_TITLE_PROB["small"]
-    elif pool_size <= 50:
-        return CHAMPION_MIN_TITLE_PROB["medium"]
-    elif pool_size <= 100:
-        return CHAMPION_MIN_TITLE_PROB["large"]
-    else:
-        return CHAMPION_MIN_TITLE_PROB["huge"]
 
 
 # ============================================================================
@@ -362,21 +349,19 @@ def evaluate_champions(teams: list[Team],
                       pool_size: int, 
                       sim_count: int = 2000, 
                       base_seed: int = 42) -> list[ChampionCandidate]:
-    """Identify 3-5 viable champion candidates ranked by pool-adjusted value."""
+    """Identify up to 8 viable champion candidates ranked by pool-adjusted value."""
     logger.info("=== COMPONENT 1: Evaluating champion candidates ===")
     
     title_probs = estimate_title_probabilities(matchup_matrix, bracket, sim_count, base_seed)
-    min_threshold = get_min_title_prob_threshold(pool_size)
-    logger.info(f"Min title probability threshold for pool size {pool_size}: {min_threshold:.1%}")
-    
+
     ownership_map = {p.team: p for p in ownership_profiles}
     team_map = {t.name: t for t in teams}
     candidates = []
-    
+
     for team_name, title_prob in title_probs.items():
-        if title_prob < min_threshold:
+        if title_prob <= 0:
             continue
-        
+
         team = team_map.get(team_name)
         if not team:
             continue
@@ -404,12 +389,7 @@ def evaluate_champions(teams: list[Team],
     
     candidates.sort(key=lambda c: c.adjusted_value, reverse=True)
     
-    if len(candidates) < 2:
-        logger.warning(f"Only {len(candidates)} candidates met threshold. Relaxing...")
-        # Re-run with relaxed threshold...
-        # (implementation omitted for brevity - see above for full version)
-    
-    top_candidates = candidates[:5]
+    top_candidates = candidates[:8]
     
     logger.info(f"Champion evaluation complete. Top {len(top_candidates)} candidates:")
     for i, cand in enumerate(top_candidates, 1):
@@ -652,177 +632,169 @@ def select_cinderella(teams: list[Team],
     return best[0], best[1]
 
 
-def generate_scenarios(champion_candidates: list[ChampionCandidate], 
-                      teams: list[Team], 
-                      matchup_matrix: dict[str, dict[str, float]], 
-                      ownership_profiles: list[OwnershipProfile], 
-                      bracket: BracketStructure, 
+def generate_scenarios(champion_candidates: list[ChampionCandidate],
+                      teams: list[Team],
+                      matchup_matrix: dict[str, dict[str, float]],
+                      ownership_profiles: list[OwnershipProfile],
+                      bracket: BracketStructure,
                       pool_size: int) -> list[Scenario]:
-    """Generate 5-8 coherent tournament scenarios."""
+    """Generate ~24 scenarios covering top 8 champion candidates at varying chaos levels.
+
+    Strategy:
+    - Top 4 champions (ranks 0-3): 3 scenarios each (low/medium/high chaos) = 12
+    - Champions 5-8 (ranks 4-7): 2 scenarios each (medium/high chaos) = 8
+    - Top 2 champions: 2 extra FF-variant scenarios (low chaos, different FF) = 4
+    Total: ~24 scenarios (fewer if <8 candidates available)
+    """
     logger.info("=== COMPONENT 2: Generating scenarios ===")
-    
+
+    if not champion_candidates:
+        logger.warning("No champion candidates provided")
+        return []
+
     scenarios = []
     regions = list(set(t.region for t in teams if t.region))
-    
-    # Generate 2 chalk scenarios
-    for i in range(2):
-        if not champion_candidates:
-            break
-        
-        champ_cand = champion_candidates[0]
-        champ_region = champ_cand.region
-        
-        # Pick FF teams (1-2 seeds from other regions)
+
+    def _build_ff(champ_cand, chaos_level, exclude_ff=None):
+        """Build Final Four dict for a champion at a given chaos level."""
+        exclude_ff = exclude_ff or {}
         ff_teams = {}
         for region in regions:
-            if region == champ_region:
+            if region == champ_cand.region:
                 ff_teams[region] = champ_cand.team_name
             else:
+                # Determine regional chaos: champion's region is always stable
+                region_chaos = chaos_level
+                exclude_list = [exclude_ff[region]] if region in exclude_ff else []
                 team_name, _ = select_regional_champion(
                     region, teams, matchup_matrix, ownership_profiles, bracket,
-                    "low", pool_size, exclude_teams=[]
+                    region_chaos, pool_size, exclude_teams=exclude_list
                 )
                 ff_teams[region] = team_name
-        
-        # Vary slightly between the two chalk scenarios
-        if i == 1 and len(regions) >= 4:
-            # Swap one non-champion regional pick
-            other_regions = [r for r in regions if r != champ_region]
-            if other_regions:
-                swap_region = other_regions[0]
-                team_name, _ = select_regional_champion(
-                    swap_region, teams, matchup_matrix, ownership_profiles, bracket,
-                    "medium", pool_size, exclude_teams=[ff_teams[swap_region]]
-                )
-                ff_teams[swap_region] = team_name
-        
-        scenarios.append(Scenario(
-            scenario_id=f"chalk_{i}",
-            scenario_type="chalk",
-            champion=champ_cand.team_name,
-            champion_seed=champ_cand.seed,
-            final_four=ff_teams,
-            chaos_regions=[],
-            cinderella=None,
-            cinderella_target_round=None,
-            chaos_level="low"
-        ))
-    
-    # Generate 2-3 contrarian scenarios (Amendment 4: force different champions)
-    for i in range(2):
-        if len(champion_candidates) < 2:
-            break
-        
-        # MUST use champion_candidate[1] or higher (not [0])
-        champ_idx = min(i + 1, len(champion_candidates) - 1)
-        champ_cand = champion_candidates[champ_idx]
-        
-        # If same region as chalk champion, try next candidate
-        if champ_cand.region == champion_candidates[0].region and len(champion_candidates) > champ_idx + 1:
-            champ_cand = champion_candidates[champ_idx + 1]
-        
-        champ_region = champ_cand.region
-        
-        # Pick 1-2 chaos regions (not champion's region)
+        return ff_teams
+
+    def _chaos_regions_for_level(champ_region, chaos_level):
+        """Determine which regions get upset activity."""
         other_regions = [r for r in regions if r != champ_region]
-        chaos_count = min(2, len(other_regions))
-        chaos_regions = other_regions[:chaos_count]
-        
-        # Pick FF teams
-        ff_teams = {}
-        for region in regions:
-            if region == champ_region:
-                ff_teams[region] = champ_cand.team_name
-            elif region in chaos_regions:
-                team_name, _ = select_regional_champion(
-                    region, teams, matchup_matrix, ownership_profiles, bracket,
-                    "medium", pool_size, exclude_teams=[]
-                )
-                ff_teams[region] = team_name
-            else:
-                team_name, _ = select_regional_champion(
-                    region, teams, matchup_matrix, ownership_profiles, bracket,
-                    "low", pool_size, exclude_teams=[]
-                )
-                ff_teams[region] = team_name
-        
-        # Maybe select a Cinderella
+        if chaos_level == "low":
+            return []
+        elif chaos_level == "medium":
+            return other_regions[:min(2, len(other_regions))]
+        else:  # high
+            return other_regions
+
+    def _maybe_cinderella(chaos_level, chaos_regions):
+        """Select a Cinderella for medium/high chaos scenarios."""
+        if chaos_level == "low":
+            return None, None
         cinderella, cinder_target = select_cinderella(
             teams, matchup_matrix, ownership_profiles, bracket, chaos_regions, pool_size
         )
-        
-        scenarios.append(Scenario(
-            scenario_id=f"contrarian_{i}",
-            scenario_type="contrarian",
-            champion=champ_cand.team_name,
-            champion_seed=champ_cand.seed,
-            final_four=ff_teams,
-            chaos_regions=chaos_regions,
-            cinderella=cinderella,
-            cinderella_target_round=cinder_target,
-            chaos_level="medium"
-        ))
-    
-    # Generate 1-2 chaos scenarios (Amendment 4: MUST NOT use champion_candidate[0])
-    for i in range(2):
-        # MUST use a different champion from chalk scenarios
-        if len(champion_candidates) < 2:
-            # Not enough candidates - reuse contrarian champion but change FF structure
-            if len(champion_candidates) >= 1:
-                champ_cand = champion_candidates[min(1, len(champion_candidates) - 1)]
-            else:
-                break
-        else:
-            # Use candidate [1], [2], or higher - never [0]
-            champ_idx = min(1 + i, len(champion_candidates) - 1)
-            champ_idx = max(1, champ_idx)  # Ensure we never use [0]
-            champ_cand = champion_candidates[champ_idx]
-        
-        champ_region = champ_cand.region
-        
-        # More chaos regions
-        other_regions = [r for r in regions if r != champ_region]
-        chaos_regions = other_regions  # All non-champion regions
-        
-        # Pick FF teams with higher variance
-        ff_teams = {}
-        for region in regions:
-            if region == champ_region:
-                ff_teams[region] = champ_cand.team_name
-            else:
-                team_name, _ = select_regional_champion(
-                    region, teams, matchup_matrix, ownership_profiles, bracket,
-                    "high", pool_size, exclude_teams=[]
-                )
-                ff_teams[region] = team_name
-        
-        # Definitely select a Cinderella for chaos
-        cinderella, cinder_target = select_cinderella(
-            teams, matchup_matrix, ownership_profiles, bracket, chaos_regions, pool_size
-        )
-        if not cinderella and other_regions:
-            # Force one - pick a 12 seed in a chaos region
-            candidates = [t for t in teams if t.region in chaos_regions and t.seed == 12]
-            if candidates:
-                cinderella = candidates[0].name
+        # Force a Cinderella for high chaos if none found naturally
+        if not cinderella and chaos_level == "high" and chaos_regions:
+            cinder_candidates = [t for t in teams if t.region in chaos_regions and t.seed == 12]
+            if cinder_candidates:
+                cinderella = cinder_candidates[0].name
                 cinder_target = 3
-        
-        scenarios.append(Scenario(
-            scenario_id=f"chaos_{i}",
-            scenario_type="chaos",
-            champion=champ_cand.team_name,
-            champion_seed=champ_cand.seed,
-            final_four=ff_teams,
-            chaos_regions=chaos_regions,
-            cinderella=cinderella,
-            cinderella_target_round=cinder_target,
-            chaos_level="high"
-        ))
-    
-    logger.info(f"Generated {len(scenarios)} scenarios")
+        return cinderella, cinder_target
+
+    scenario_count = 0
+
+    # --- Core scenarios: each champion at appropriate chaos levels ---
+    for rank, champ_cand in enumerate(champion_candidates):
+        # Top 4: low/medium/high. Ranks 5-8: medium/high only.
+        if rank < 4:
+            chaos_levels = ["low", "medium", "high"]
+        else:
+            chaos_levels = ["medium", "high"]
+
+        for chaos_level in chaos_levels:
+            chaos_regions = _chaos_regions_for_level(champ_cand.region, chaos_level)
+            ff_teams = _build_ff(champ_cand, chaos_level)
+            cinderella, cinder_target = _maybe_cinderella(chaos_level, chaos_regions)
+
+            # Map chaos_level to scenario_type
+            if chaos_level == "low":
+                scenario_type = "chalk"
+            elif chaos_level == "medium":
+                scenario_type = "contrarian"
+            else:
+                scenario_type = "chaos"
+
+            scenarios.append(Scenario(
+                scenario_id=f"{scenario_type}_{champ_cand.team_name}_{chaos_level}",
+                scenario_type=scenario_type,
+                champion=champ_cand.team_name,
+                champion_seed=champ_cand.seed,
+                final_four=ff_teams,
+                chaos_regions=chaos_regions,
+                cinderella=cinderella,
+                cinderella_target_round=cinder_target,
+                chaos_level=chaos_level
+            ))
+            scenario_count += 1
+
+    # --- FF-variant scenarios for top 2 champions ---
+    # Same champion, low chaos, but swap 2 regional picks to explore
+    # different Final Four compositions
+    for rank in range(min(2, len(champion_candidates))):
+        champ_cand = champion_candidates[rank]
+
+        # Build baseline FF at low chaos to know what to exclude
+        baseline_ff = _build_ff(champ_cand, "low")
+
+        # Variant 1: swap 2 non-champion regions to their next-best pick
+        other_regions = [r for r in regions if r != champ_cand.region]
+        exclude_ff = {}
+        for region in other_regions[:2]:
+            exclude_ff[region] = baseline_ff[region]
+
+        variant_ff = _build_ff(champ_cand, "low", exclude_ff=exclude_ff)
+
+        # Only add if the FF actually differs
+        if variant_ff != baseline_ff:
+            scenarios.append(Scenario(
+                scenario_id=f"ff_variant_{champ_cand.team_name}",
+                scenario_type="chalk",
+                champion=champ_cand.team_name,
+                champion_seed=champ_cand.seed,
+                final_four=variant_ff,
+                chaos_regions=[],
+                cinderella=None,
+                cinderella_target_round=None,
+                chaos_level="low"
+            ))
+            scenario_count += 1
+
+        # Variant 2: medium-chaos FF with this champion (different supporting cast)
+        baseline_med_ff = _build_ff(champ_cand, "medium")
+        exclude_ff_med = {}
+        for region in other_regions[:2]:
+            exclude_ff_med[region] = baseline_med_ff[region]
+
+        variant_med_ff = _build_ff(champ_cand, "medium", exclude_ff=exclude_ff_med)
+
+        if variant_med_ff != baseline_med_ff:
+            chaos_regions = _chaos_regions_for_level(champ_cand.region, "medium")
+            cinderella, cinder_target = _maybe_cinderella("medium", chaos_regions)
+            scenarios.append(Scenario(
+                scenario_id=f"ff_variant_{champ_cand.team_name}_med",
+                scenario_type="contrarian",
+                champion=champ_cand.team_name,
+                champion_seed=champ_cand.seed,
+                final_four=variant_med_ff,
+                chaos_regions=chaos_regions,
+                cinderella=cinderella,
+                cinderella_target_round=cinder_target,
+                chaos_level="medium"
+            ))
+            scenario_count += 1
+
+    logger.info(f"Generated {len(scenarios)} scenarios across {len(champion_candidates)} champions")
     for scenario in scenarios:
-        logger.info(f"  {scenario.scenario_id}: champion={scenario.champion}, chaos={scenario.chaos_level}")
-    
+        logger.info(f"  {scenario.scenario_id}: champion={scenario.champion} "
+                    f"(seed {scenario.champion_seed}), chaos={scenario.chaos_level}")
+
     return scenarios
 
 
@@ -1646,7 +1618,7 @@ def optimize_bracket(teams: list[Team],
                     ownership_profiles: list[OwnershipProfile], 
                     bracket: BracketStructure, 
                     config) -> list[CompleteBracket]:
-    """Full optimization pipeline - returns 3 optimized brackets."""
+    """Full optimization pipeline - generates ~24 scenarios across top 8 champions, returns 3 optimized brackets."""
     logger.info("=== Starting bracket optimization (V2) ===")
     
     # Handle config attributes with defaults for backward compatibility

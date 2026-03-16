@@ -4,10 +4,12 @@ import unittest
 from src.contrarian import (
     estimate_seed_ownership,
     calculate_leverage,
+    calculate_pool_leverage,
     build_ownership_profiles,
-    find_value_picks
+    find_value_picks,
+    update_leverage_with_model
 )
-from src.models import Team, OwnershipProfile
+from src.models import Team, OwnershipProfile, BracketStructure
 
 
 class TestContrarian(unittest.TestCase):
@@ -76,7 +78,7 @@ class TestContrarian(unittest.TestCase):
             Team(name="Oregon", seed=5, kenpom_rank=20),
         ]
         
-        profiles = build_ownership_profiles(teams, espn_picks=None)
+        profiles = build_ownership_profiles(teams, public_picks=None)
         
         self.assertEqual(len(profiles), 3)
         
@@ -118,6 +120,73 @@ class TestContrarian(unittest.TestCase):
         top_pick = value_picks[0]
         self.assertEqual(top_pick["team"], "Houston")
         self.assertGreaterEqual(top_pick["leverage"], 1.5)
+
+
+class TestPoolLeverage(unittest.TestCase):
+    """Test pool-size-aware leverage calculation."""
+
+    def test_standard(self):
+        """Pool=25, moderate ownership."""
+        # 0.30 / (24 * 0.10 + 1) = 0.30 / 3.4
+        result = calculate_pool_leverage(0.30, 0.10, 25)
+        self.assertAlmostEqual(result, 0.30 / 3.4, places=4)
+
+    def test_small_pool(self):
+        """Pool=10, same prob/ownership gives higher leverage."""
+        # 0.30 / (9 * 0.10 + 1) = 0.30 / 1.9
+        result = calculate_pool_leverage(0.30, 0.10, 10)
+        self.assertAlmostEqual(result, 0.30 / 1.9, places=4)
+
+    def test_ownership_floor(self):
+        """Very low ownership floors at 0.005."""
+        # 0.10 / (24 * 0.005 + 1) = 0.10 / 1.12
+        result = calculate_pool_leverage(0.10, 0.001, 25)
+        self.assertAlmostEqual(result, 0.10 / 1.12, places=4)
+
+    def test_high_ownership(self):
+        """High ownership = very low leverage."""
+        # 0.50 / (24 * 0.90 + 1) = 0.50 / 22.6
+        result = calculate_pool_leverage(0.50, 0.90, 25)
+        self.assertAlmostEqual(result, 0.50 / 22.6, places=4)
+
+
+class TestLeverageFallback(unittest.TestCase):
+    """Test update_leverage_with_model ownership fallback behavior."""
+
+    def _run_update(self, seed, adj_em, round_ownership, pool_size=25):
+        """Helper: run update_leverage_with_model with minimal inputs."""
+        team = Team(name="T", seed=seed, adj_em=adj_em)
+        profile = OwnershipProfile(
+            team="T", seed=seed,
+            round_ownership=round_ownership,
+            leverage_by_round={r: 1.0 for r in round_ownership},
+            title_ownership=round_ownership.get(6, 0.01),
+            title_leverage=1.0
+        )
+        bracket = BracketStructure(slots=[], regions={}, play_in_games=[])
+        update_leverage_with_model([profile], [team], {"T": {}}, bracket, pool_size)
+        return profile
+
+    def test_zero_ownership_triggers_fallback(self):
+        """Zero ownership should fall back to seed-based estimate, not 0.5."""
+        # Seed 5 R1 ownership from SEED_OWNERSHIP_CURVES = 0.650
+        # round_probs[1] = 1.0 (hardcoded)
+        # leverage = 1.0 / (24 * 0.650 + 1) = 1.0 / 16.6
+        profile = self._run_update(5, 14.0, {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0})
+        self.assertAlmostEqual(profile.leverage_by_round[1], 1.0 / 16.6, places=4)
+
+    def test_nonzero_ownership_used_directly(self):
+        """Nonzero ownership should be used as-is, not replaced."""
+        # 1.0 / (24 * 0.80 + 1) = 1.0 / 20.2
+        profile = self._run_update(5, 14.0, {1: 0.80, 2: 0.50, 3: 0.25, 4: 0.10, 5: 0.05, 6: 0.01})
+        self.assertAlmostEqual(profile.leverage_by_round[1], 1.0 / 20.2, places=4)
+
+    def test_fallback_does_not_use_half(self):
+        """Seed-16 R6 fallback ownership should be ~0 (floored to 0.005), not 0.5."""
+        profile = self._run_update(16, -2.0, {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0})
+        # With seed 16 and adj_em <= 0, title prob is vanishingly small
+        # If ownership defaulted to 0.5, leverage would be much larger
+        self.assertLess(profile.leverage_by_round[6], 0.001)
 
 
 if __name__ == '__main__':

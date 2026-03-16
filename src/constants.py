@@ -241,15 +241,6 @@ CHAMPION_SEED_FREQUENCY: dict[int, float] = {
     11: 0.00, 12: 0.00, 13: 0.00, 14: 0.00, 15: 0.00, 16: 0.00,
 }
 
-# Minimum title probability to be considered as champion candidate
-# Scales with pool size: larger pools tolerate lower-probability champions
-CHAMPION_MIN_TITLE_PROB: dict[str, float] = {
-    "tiny":   0.15,  # Pool ≤ 10
-    "small":  0.08,  # Pool 11-25
-    "medium": 0.05,  # Pool 26-50
-    "large":  0.03,  # Pool 51-100
-    "huge":   0.02,  # Pool 100+
-}
 
 # DEPRECATED: Kept for backward compatibility with tests only
 # DO NOT USE - the V2 optimizer uses pool-size-aware formulas instead
