@@ -1,0 +1,315 @@
+====================================================================================================
+                                   MARCH MADNESS BRACKET
+====================================================================================================
+
+
+──────────────────────────────────────── ROUND OF 64 ────────────────────────────────────────
+
+  Duke                      (1)  ✓
+  Siena                     (16)
+    → Winner: Duke 🔒 Lock
+
+  Ohio St.                  (8) 
+  TCU                       (9)  ✓
+    → Winner: TCU 🎲 Gamble [UPSET]
+
+  St. John's                (5)  ✓
+  Northern Iowa             (12)
+    → Winner: St. John's 🔒 Lock
+
+  Kansas                    (4)  ✓
+  Cal Baptist               (13)
+    → Winner: Kansas 🔒 Lock
+
+  Louisville                (6)  ✓
+  South Florida             (11)
+    → Winner: Louisville 👍 Lean
+
+  Michigan St.              (3)  ✓
+  North Dakota St.          (14)
+    → Winner: Michigan St. 🔒 Lock
+
+  UCLA                      (7) 
+  UCF                       (10) ✓
+    → Winner: UCF 🎲 Gamble [UPSET]
+
+  UConn                     (2)  ✓
+  Furman                    (15)
+    → Winner: UConn 🔒 Lock
+
+  Arizona                   (1)  ✓
+  Long Island               (16)
+    → Winner: Arizona 🔒 Lock
+
+  Villanova                 (8) 
+  Utah St.                  (9)  ✓
+    → Winner: Utah St. 👍 Lean [UPSET]
+
+  Wisconsin                 (5)  ✓
+  High Point                (12)
+    → Winner: Wisconsin 🔒 Lock
+
+  Arkansas                  (4)  ✓
+  Hawaii                    (13)
+    → Winner: Arkansas 🔒 Lock
+
+  BYU                       (6) 
+  NC State                  (11) ✓
+    → Winner: NC State 🎲 Gamble [UPSET]
+
+  Gonzaga                   (3)  ✓
+  Kennesaw St.              (14)
+    → Winner: Gonzaga 🔒 Lock
+
+  Miami (FL)                (7) 
+  Missouri                  (10) ✓
+    → Winner: Missouri 🎲 Gamble [UPSET]
+
+  Purdue                    (2)  ✓
+  Queens (N.C.)             (15)
+    → Winner: Purdue 🔒 Lock
+
+  Florida                   (1)  ✓
+  Lehigh                    (16)
+    → Winner: Florida 🔒 Lock
+
+  Clemson                   (8) 
+  Iowa                      (9)  ✓
+    → Winner: Iowa 🔒 Lock [UPSET]
+
+  Vanderbilt                (5)  ✓
+  McNeese                   (12)
+    → Winner: Vanderbilt 🔒 Lock
+
+  Nebraska                  (4)  ✓
+  Troy                      (13)
+    → Winner: Nebraska 🔒 Lock
+
+  North Carolina            (6)  ✓
+  VCU                       (11)
+    → Winner: North Carolina 👍 Lean
+
+  Illinois                  (3)  ✓
+  Penn                      (14)
+    → Winner: Illinois 🔒 Lock
+
+  Saint Mary's              (7)  ✓
+  Texas A&M                 (10)
+    → Winner: Saint Mary's 👍 Lean
+
+  Houston                   (2)  ✓
+  Idaho                     (15)
+    → Winner: Houston 🔒 Lock
+
+  Michigan                  (1)  ✓
+  Howard                    (16)
+    → Winner: Michigan 🔒 Lock
+
+  Georgia                   (8) 
+  Saint Louis               (9)  ✓
+    → Winner: Saint Louis 🎲 Gamble [UPSET]
+
+  Texas Tech                (5)  ✓
+  Akron                     (12)
+    → Winner: Texas Tech 🔒 Lock
+
+  Alabama                   (4)  ✓
+  Hofstra                   (13)
+    → Winner: Alabama 🔒 Lock
+
+  Tennessee                 (6) 
+  SMU                       (11) ✓
+    → Winner: SMU 🎲 Gamble [UPSET]
+
+  Virginia                  (3)  ✓
+  Wright St.                (14)
+    → Winner: Virginia 🔒 Lock
+
+  Kentucky                  (7)  ✓
+  Santa Clara               (10)
+    → Winner: Kentucky 👍 Lean
+
+  Iowa St.                  (2)  ✓
+  Tennessee St.             (15)
+    → Winner: Iowa St. 🔒 Lock
+
+
+──────────────────────────────────────── ROUND OF 32 ────────────────────────────────────────
+
+  Duke                           ✓
+      vs
+  TCU                           
+    → Winner: Duke 🔒 Lock
+
+  St. John's                    
+      vs
+  Kansas                         ✓
+    → Winner: Kansas 🎲 Gamble
+
+  Louisville                    
+      vs
+  Michigan St.                   ✓
+    → Winner: Michigan St. 👍 Lean
+
+  UConn                          ✓
+      vs
+  UCF                           
+    → Winner: UConn 🔒 Lock
+
+  Arizona                        ✓
+      vs
+  Utah St.                      
+    → Winner: Arizona 🔒 Lock
+
+  Wisconsin                     
+      vs
+  Arkansas                       ✓
+    → Winner: Arkansas 🎲 Gamble
+
+  NC State                      
+      vs
+  Gonzaga                        ✓
+    → Winner: Gonzaga 👍 Lean
+
+  Purdue                         ✓
+      vs
+  Missouri                      
+    → Winner: Purdue 🔒 Lock
+
+  Florida                        ✓
+      vs
+  Iowa                          
+    → Winner: Florida 👍 Lean
+
+  Vanderbilt                    
+      vs
+  Nebraska                       ✓
+    → Winner: Nebraska 🎲 Gamble
+
+  North Carolina                
+      vs
+  Illinois                       ✓
+    → Winner: Illinois 👍 Lean
+
+  Saint Mary's                  
+      vs
+  Houston                        ✓
+    → Winner: Houston 👍 Lean
+
+  Michigan                       ✓
+      vs
+  Saint Louis                   
+    → Winner: Michigan 🔒 Lock
+
+  Texas Tech                    
+      vs
+  Alabama                        ✓
+    → Winner: Alabama 🎲 Gamble
+
+  SMU                           
+      vs
+  Virginia                       ✓
+    → Winner: Virginia 👍 Lean
+
+  Iowa St.                       ✓
+      vs
+  Kentucky                      
+    → Winner: Iowa St. 👍 Lean
+
+
+──────────────────────────────────────── SWEET 16 ────────────────────────────────────────
+
+  Duke                           ✓
+      vs
+  Kansas                        
+    → Winner: Duke 🔒 Lock
+
+  UConn                          ✓
+      vs
+  Michigan St.                  
+    → Winner: UConn 🎲 Gamble
+
+  Arizona                        ✓
+      vs
+  Arkansas                      
+    → Winner: Arizona 👍 Lean
+
+  Purdue                         ✓
+      vs
+  Gonzaga                       
+    → Winner: Purdue 👍 Lean
+
+  Florida                        ✓
+      vs
+  Nebraska                      
+    → Winner: Florida 👍 Lean
+
+  Illinois                      
+      vs
+  Houston                        ✓
+    → Winner: Houston 🎲 Gamble
+
+  Michigan                       ✓
+      vs
+  Alabama                       
+    → Winner: Michigan 👍 Lean
+
+  Iowa St.                       ✓
+      vs
+  Virginia                      
+    → Winner: Iowa St. 🎲 Gamble
+
+
+──────────────────────────────────────── ELITE 8 ────────────────────────────────────────
+
+  UConn                          ✓
+      vs
+  Duke                          
+    → Winner: UConn 🎲 Gamble [UPSET]
+
+  Purdue                         ✓
+      vs
+  Arizona                       
+    → Winner: Purdue 🎲 Gamble [UPSET]
+
+  Florida                        ✓
+      vs
+  Houston                       
+    → Winner: Florida 🎲 Gamble
+
+  Iowa St.                       ✓
+      vs
+  Michigan                      
+    → Winner: Iowa St. 🎲 Gamble [UPSET]
+
+
+──────────────────────────────────────── FINAL FOUR ────────────────────────────────────────
+
+  Purdue                         ✓
+      vs
+  UConn                         
+    → Winner: Purdue 🔒 Lock
+
+  Iowa St.                       ✓
+      vs
+  Florida                       
+    → Winner: Iowa St. 👍 Lean [UPSET]
+
+
+──────────────────────────────────────── CHAMPIONSHIP ────────────────────────────────────────
+
+  Purdue                         ✓
+      vs
+  Iowa St.                      
+    → Winner: Purdue 👍 Lean
+
+
+====================================================================================================
+CHAMPION: Purdue
+FINAL FOUR: Iowa St., Purdue, UConn, Florida
+ELITE EIGHT: Duke, UConn, Arizona, Purdue, Florida, Houston, Michigan, Iowa St.
+
+Expected Score: 765 points
+P(1st Place): 17.8%
+Expected Finish: 13.7
+====================================================================================================
