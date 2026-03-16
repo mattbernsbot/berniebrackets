@@ -186,9 +186,9 @@
   Nebraska                       ✓
     → Winner: Nebraska 🎲 Gamble
 
-  Illinois                       ✓
-      vs
   North Carolina                
+      vs
+  Illinois                       ✓
     → Winner: Illinois 👍 Lean
 
   Saint Mary's                  
@@ -239,15 +239,15 @@
   Gonzaga                       
     → Winner: Purdue 👍 Lean
 
-  Florida                       
+  Florida                        ✓
       vs
-  Nebraska                       ✓
-    → Winner: Nebraska 🎲 Gamble [UPSET]
+  Nebraska                      
+    → Winner: Florida 👍 Lean
 
-  Illinois                       ✓
+  Illinois                      
       vs
-  Houston                       
-    → Winner: Illinois 👍 Lean [UPSET]
+  Houston                        ✓
+    → Winner: Houston 🎲 Gamble
 
   Michigan                       ✓
       vs
@@ -272,10 +272,10 @@
   Arizona                       
     → Winner: Purdue 🎲 Gamble [UPSET]
 
-  Illinois                       ✓
+  Florida                        ✓
       vs
-  Nebraska                      
-    → Winner: Illinois 👍 Lean
+  Houston                       
+    → Winner: Florida 🎲 Gamble
 
   Iowa St.                       ✓
       vs
@@ -290,26 +290,26 @@
   UConn                         
     → Winner: Purdue 🔒 Lock
 
-  Illinois                       ✓
+  Iowa St.                       ✓
       vs
-  Iowa St.                      
-    → Winner: Illinois 👍 Lean [UPSET]
+  Florida                       
+    → Winner: Iowa St. 👍 Lean [UPSET]
 
 
 ──────────────────────────────────────── CHAMPIONSHIP ────────────────────────────────────────
 
   Purdue                         ✓
       vs
-  Illinois                      
+  Iowa St.                      
     → Winner: Purdue 👍 Lean
 
 
 ====================================================================================================
 CHAMPION: Purdue
-FINAL FOUR: Illinois, UConn, Purdue, Iowa St.
-ELITE EIGHT: Duke, UConn, Arizona, Purdue, Nebraska, Illinois, Michigan, Iowa St.
+FINAL FOUR: Iowa St., Florida, UConn, Purdue
+ELITE EIGHT: Duke, UConn, Arizona, Purdue, Florida, Houston, Michigan, Iowa St.
 
-Expected Score: 766 points
-P(1st Place): 20.8%
-Expected Finish: 14.0
+Expected Score: 765 points
+P(1st Place): 17.8%
+Expected Finish: 13.7
 ====================================================================================================
