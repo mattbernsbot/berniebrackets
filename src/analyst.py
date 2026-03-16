@@ -465,7 +465,8 @@ def generate_summary_json(all_brackets: list[CompleteBracket]) -> dict:
 def generate_bracket_html(brackets: list[CompleteBracket],
                           bracket_structure: BracketStructure,
                           teams: list[Team],
-                          ownership_profiles: list[OwnershipProfile]) -> str:
+                          ownership_profiles: list[OwnershipProfile],
+                          matchup_matrix: dict[str, dict[str, float]] = None) -> str:
     """Generate a self-contained interactive HTML bracket viewer."""
 
     # Prepare data for embedding
@@ -515,11 +516,25 @@ def generate_bracket_html(brackets: list[CompleteBracket],
         "title_leverage": round(p.title_leverage, 2),
     } for p in ownership_profiles}
 
+    # Build matchup data — only include teams in the bracket to keep size reasonable
+    bracket_teams = set(team_data.keys())
+    matchup_data = {}
+    if matchup_matrix:
+        for team_a, opponents in matchup_matrix.items():
+            if team_a not in bracket_teams:
+                continue
+            matchup_data[team_a] = {
+                team_b: round(prob, 4)
+                for team_b, prob in opponents.items()
+                if team_b in bracket_teams
+            }
+
     html = _HTML_TEMPLATE
     html = html.replace("__BRACKET_DATA__", json.dumps(bracket_data))
     html = html.replace("__STRUCTURE_DATA__", json.dumps(structure_data))
     html = html.replace("__TEAM_DATA__", json.dumps(team_data))
     html = html.replace("__OWNERSHIP_DATA__", json.dumps(ownership_data))
+    html = html.replace("__MATCHUP_DATA__", json.dumps(matchup_data))
 
     return html
 
@@ -626,8 +641,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .tc-stat { display: flex; flex-direction: column; }
 .tc-stat-label { font-size: 9px; color: #667; text-transform: uppercase; letter-spacing: 0.5px; }
 .tc-stat-value { font-size: 13px; font-weight: 600; color: #ccc; }
-.tc-stat-value.good { color: #4caf50; }
-.tc-stat-value.warn { color: var(--upset); }
+.tc-stat-value.good, .ps-value.good { color: #4caf50; }
+.tc-stat-value.warn, .ps-value.warn { color: var(--upset); }
 
 /* Pick summary in detail panel */
 .pick-summary { background: #16213e; border-radius: 8px; padding: 14px; margin-top: 4px; }
@@ -655,6 +670,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <h1>BernieBrackets</h1>
   <select id="bracket-selector"></select>
   <div class="header-spacer"></div>
+  <button class="glossary-btn" onclick="document.getElementById('methodology-modal').classList.add('open')">Methodology</button>
   <button class="glossary-btn" onclick="document.getElementById('glossary-modal').classList.add('open')">Glossary</button>
 </div>
 
@@ -701,11 +717,91 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   </div>
 </div>
 
+<!-- Methodology Modal -->
+<div class="modal-overlay" id="methodology-modal">
+  <div class="modal-backdrop" onclick="document.getElementById('methodology-modal').classList.remove('open')"></div>
+  <div class="modal-content" style="max-width:680px;">
+    <button class="modal-close" onclick="document.getElementById('methodology-modal').classList.remove('open')">&times;</button>
+    <h2>Methodology</h2>
+
+    <div class="gloss-item">
+      <span class="gloss-term">1. Data Collection</span>
+      <div class="gloss-def">
+        We scrape live data from five sources: <b>NCAA.com</b> for the official 68-team bracket and seedings, <b>KenPom</b> for adjusted efficiency ratings (AdjEM, AdjO, AdjD, tempo, luck, SOS), <b>Barttorvik</b> for Barthag and Wins Above Bubble (WAB), <b>LRMC</b> (Georgia Tech) for top-25 win/loss records, and <b>Yahoo Bracket Mayhem</b> for public pick percentages across all 6 rounds. All data is cached locally so re-runs don't re-scrape.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">2. Win Probability Model</span>
+      <div class="gloss-def">
+        A pairwise win probability matrix is built for all 68 teams. The primary engine is a <b>stacked ensemble</b> of Logistic Regression, Random Forest, and Gradient Boosted Trees trained on <b>738 NCAA tournament games (2011&ndash;2025)</b>. The model uses 16 features extracted from the team stats above: seed difference, AdjEM gap, offensive/defensive efficiency gaps, Barthag gap, WAB gap, top-25 record, tempo differential, and interaction terms. When the trained model is unavailable, we fall back to historical seed-vs-seed upset rates.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">3. Ownership &amp; Leverage Analysis</span>
+      <div class="gloss-def">
+        Yahoo public pick percentages tell us what the field is doing. For each team at each round, we compute <b>leverage = model probability / public ownership</b>. Leverage &gt;1 means the public is undervaluing a team relative to our model. This is the key contrarian signal: we want picks where we're right and the crowd is wrong, because those picks create separation in the pool standings.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">4. Scenario Generation</span>
+      <div class="gloss-def">
+        We identify the <b>top 8 champion candidates</b> ranked by pool-adjusted value (title probability divided by expected number of opponents picking the same champion). For each candidate, we generate scenarios at multiple chaos levels:
+        <ul style="margin:6px 0 0 16px; line-height:1.8;">
+          <li><b>Chalk</b> (low chaos) &mdash; favorites win most games, upsets are rare</li>
+          <li><b>Contrarian</b> (medium chaos) &mdash; 1&ndash;2 upset-heavy regions, a Cinderella run</li>
+          <li><b>Chaos</b> (high chaos) &mdash; upsets across all regions, deep runs by mid-seeds</li>
+        </ul>
+        The top 4 champions get all 3 levels; champions 5&ndash;8 get medium and high only. The top 2 champions also get Final Four variant scenarios with different supporting casts. This yields ~24 distinct bracket scenarios.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">5. Top-Down Bracket Construction</span>
+      <div class="gloss-def">
+        Each scenario is converted into a full 63-game bracket using a <b>top-down process</b>:
+        <ol style="margin:6px 0 0 16px; line-height:1.8;">
+          <li><b>Champion</b> is locked first (worth 320 points)</li>
+          <li><b>Final Four paths</b> are locked for each region</li>
+          <li><b>EMV-positive upsets</b> are added in descending order &mdash; EMV = P(upset) &times; ownership_gain &minus; P(chalk) &times; ownership_cost. Only upsets with positive expected value make the cut.</li>
+          <li><b>Remaining slots</b> are filled with chalk (higher-seeded favorite)</li>
+        </ol>
+        This ensures the most valuable picks (champion, Final Four) are chosen for strategic reasons, not left to cascading effects from early-round picks.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">6. Monte Carlo Evaluation</span>
+      <div class="gloss-def">
+        Each of the ~24 brackets is evaluated by simulating <b>thousands of tournaments</b>. In each simulation:
+        <ol style="margin:6px 0 0 16px; line-height:1.8;">
+          <li>An <b>actual tournament outcome</b> is generated by rolling dice using the win probability matrix</li>
+          <li>A pool of <b>opponent brackets</b> is generated by sampling picks from Yahoo public ownership distributions</li>
+          <li>Your bracket and all opponents are <b>scored</b> using ESPN standard scoring [10, 20, 40, 80, 160, 320]</li>
+          <li>Your <b>finish position</b> is recorded (1st, 2nd, etc.)</li>
+        </ol>
+        Across all simulations, we compute: <b>P(1st place)</b>, <b>P(top 3)</b>, <b>expected finish</b>, and <b>expected score</b>. The bracket with the highest P(1st) is tagged as &ldquo;optimal&rdquo;.
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">7. Why This Works</span>
+      <div class="gloss-def">
+        In a small pool (10&ndash;50 people), you don't win by picking the most correct bracket &mdash; you win by picking the bracket that's most <b>different from everyone else's</b> when you happen to be right. A chalk bracket scores well on average but rarely wins the pool because 10 other people picked the same favorites. BernieBrackets finds the picks where the model disagrees with the public and the expected value of being contrarian is positive. It's not about being different for its own sake &mdash; it's about being different in spots where the math says the crowd is wrong.
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <script>
 const BRACKETS = __BRACKET_DATA__;
 const SLOTS = __STRUCTURE_DATA__;
 const TEAMS = __TEAM_DATA__;
 const OWNERSHIP = __OWNERSHIP_DATA__;
+const MATCHUPS = __MATCHUP_DATA__;
 
 let currentPicks = null; // track current bracket's picks for detail panel
 
@@ -720,16 +816,27 @@ function feedersOf(slotId) {
 }
 
 function detectLayout() {
-  const ffSlots = SLOTS.filter(s => s.round_num === 5).sort((a,b) => a.slot_id - b.slot_id);
-  const layout = { left: [], right: [] };
-  ffSlots.forEach((ff, i) => {
-    const e8Feeders = feedersOf(ff.slot_id);
-    const regions = e8Feeders.map(e => e.region).filter(r => r && r !== 'FinalFour');
-    if (i === 0) layout.left = regions;
-    else layout.right = regions;
-  });
-  if (layout.left.length === 0) {
-    const allRegions = [...new Set(SLOTS.filter(s => s.region && s.region !== 'FinalFour').map(s => s.region))];
+  // ESPN layout: East top-left, South bottom-left, West top-right, Midwest bottom-right
+  // Find all regions in the data
+  const allRegions = [...new Set(SLOTS.filter(s => s.region && s.region !== 'FinalFour').map(s => s.region))];
+
+  // Map to ESPN positions; normalize to uppercase for matching
+  const regionSet = new Set(allRegions.map(r => r.toUpperCase()));
+  const find = (name) => allRegions.find(r => r.toUpperCase() === name) || null;
+
+  const east = find('EAST');
+  const west = find('WEST');
+  const south = find('SOUTH');
+  const midwest = find('MIDWEST');
+
+  // Left side: East (top), South (bottom).  Right side: West (top), Midwest (bottom).
+  const layout = {
+    left:  [east, south].filter(Boolean),
+    right: [west, midwest].filter(Boolean),
+  };
+
+  // Fallback if region names don't match expected
+  if (layout.left.length === 0 && layout.right.length === 0) {
     layout.left = allRegions.slice(0, 2);
     layout.right = allRegions.slice(2, 4);
   }
@@ -826,8 +933,15 @@ function showDetail(slotId) {
   const winnerOwn = OWNERSHIP[pick.winner] || {};
   const winRoundOwn = winnerOwn.round_ownership ? winnerOwn.round_ownership[String(pick.round_num)] : null;
 
+  // Model win probability from matchup matrix
+  const loser = (pick.winner === teamA) ? teamB : teamA;
+  const winProb = (MATCHUPS[pick.winner] && MATCHUPS[pick.winner][loser]) ? MATCHUPS[pick.winner][loser] : null;
+
   html += `<div class="pick-summary"><h3>Pick Analysis</h3>`;
   html += `<div class="ps-row"><span class="ps-label">Winner</span><span class="ps-value">${pick.winner} ${pick.confidence}</span></div>`;
+  if (winProb != null) {
+    html += `<div class="ps-row"><span class="ps-label">Model win prob</span><span class="ps-value ${winProb >= 0.5 ? 'good' : 'warn'}">${(winProb * 100).toFixed(1)}%</span></div>`;
+  }
   html += `<div class="ps-row"><span class="ps-label">Upset?</span><span class="ps-value">${pick.is_upset ? 'Yes' : 'No'}</span></div>`;
   html += `<div class="ps-row"><span class="ps-label">Leverage</span><span class="ps-value">${pick.leverage.toFixed(4)}</span></div>`;
   if (winRoundOwn != null) {
@@ -1047,9 +1161,9 @@ def generate_all_output(brackets: list[CompleteBracket], teams: list[Team],
     save_json([b.to_dict() for b in brackets], all_brackets_file)
     logger.info(f"Saved all {len(brackets)} brackets to {all_brackets_file}")
 
-    # 5. bracket.html (interactive viewer)
-    html = generate_bracket_html(brackets, bracket_structure, teams, ownership_profiles)
-    html_file = f"{config.output_dir}/bracket.html"
+    # 5. index.html (interactive viewer)
+    html = generate_bracket_html(brackets, bracket_structure, teams, ownership_profiles, matchup_matrix)
+    html_file = f"{config.output_dir}/index.html"
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html)
     logger.info(f"Saved interactive bracket viewer to {html_file}")

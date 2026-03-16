@@ -306,10 +306,10 @@
 
 ====================================================================================================
 CHAMPION: Purdue
-FINAL FOUR: Iowa St., Duke, Illinois, Purdue
+FINAL FOUR: Duke, Iowa St., Illinois, Purdue
 ELITE EIGHT: Duke, Michigan St., Arizona, Purdue, Vanderbilt, Illinois, Michigan, Iowa St.
 
 Expected Score: 706 points
-P(1st Place): 18.0%
-Expected Finish: 13.4
+P(1st Place): 18.9%
+Expected Finish: 10.8
 ====================================================================================================

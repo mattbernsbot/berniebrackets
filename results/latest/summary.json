@@ -6,7 +6,7 @@
         "round_num": 1,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04260797628133263,
+        "leverage_score": 0.053223822834073835,
         "is_upset": false
       },
       {
@@ -14,7 +14,7 @@
         "round_num": 2,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05113433516686941,
+        "leverage_score": 0.06372457389501589,
         "is_upset": false
       },
       {
@@ -22,7 +22,7 @@
         "round_num": 3,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07983639184668831,
+        "leverage_score": 0.0987503098415656,
         "is_upset": false
       },
       {
@@ -30,7 +30,7 @@
         "round_num": 4,
         "winner": "Purdue",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.20609783110137014,
+        "leverage_score": 0.24681268836607256,
         "is_upset": true
       },
       {
@@ -38,7 +38,7 @@
         "round_num": 5,
         "winner": "Purdue",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.3543489714573693,
+        "leverage_score": 0.4090679201499419,
         "is_upset": true
       },
       {
@@ -46,47 +46,15 @@
         "round_num": 6,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04373966153454637,
+        "leverage_score": 0.04806503886401713,
         "is_upset": false
-      },
-      {
-        "slot_id": 32,
-        "round_num": 1,
-        "winner": "Iowa St.",
-        "confidence": "🔒 Lock",
-        "leverage_score": 0.043669357980086074,
-        "is_upset": false
-      },
-      {
-        "slot_id": 48,
-        "round_num": 2,
-        "winner": "Iowa St.",
-        "confidence": "🎲 Gamble",
-        "leverage_score": 0.0560487340912179,
-        "is_upset": false
-      },
-      {
-        "slot_id": 56,
-        "round_num": 3,
-        "winner": "Iowa St.",
-        "confidence": "👍 Lean",
-        "leverage_score": 0.08007443849215463,
-        "is_upset": false
-      },
-      {
-        "slot_id": 60,
-        "round_num": 4,
-        "winner": "Iowa St.",
-        "confidence": "🎲 Gamble",
-        "leverage_score": 0.20050974031760743,
-        "is_upset": true
       },
       {
         "slot_id": 1,
         "round_num": 1,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04069870229745803,
+        "leverage_score": 0.05086412295526862,
         "is_upset": false
       },
       {
@@ -94,7 +62,7 @@
         "round_num": 2,
         "winner": "Duke",
         "confidence": "👍 Lean",
-        "leverage_score": 0.042196783292324305,
+        "leverage_score": 0.0527099741753072,
         "is_upset": false
       },
       {
@@ -102,7 +70,7 @@
         "round_num": 3,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04973392850612139,
+        "leverage_score": 0.0620021314954983,
         "is_upset": false
       },
       {
@@ -110,15 +78,47 @@
         "round_num": 4,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05992402360159118,
+        "leverage_score": 0.07450670353368737,
         "is_upset": false
+      },
+      {
+        "slot_id": 32,
+        "round_num": 1,
+        "winner": "Iowa St.",
+        "confidence": "🔒 Lock",
+        "leverage_score": 0.05453458629817429,
+        "is_upset": false
+      },
+      {
+        "slot_id": 48,
+        "round_num": 2,
+        "winner": "Iowa St.",
+        "confidence": "🎲 Gamble",
+        "leverage_score": 0.06975908453532698,
+        "is_upset": false
+      },
+      {
+        "slot_id": 56,
+        "round_num": 3,
+        "winner": "Iowa St.",
+        "confidence": "👍 Lean",
+        "leverage_score": 0.09903861515604934,
+        "is_upset": false
+      },
+      {
+        "slot_id": 60,
+        "round_num": 4,
+        "winner": "Iowa St.",
+        "confidence": "🎲 Gamble",
+        "leverage_score": 0.24045929182066794,
+        "is_upset": true
       },
       {
         "slot_id": 22,
         "round_num": 1,
         "winner": "Illinois",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04392166342934726,
+        "leverage_score": 0.05484606683497827,
         "is_upset": false
       },
       {
@@ -126,7 +126,7 @@
         "round_num": 2,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06334063904690637,
+        "leverage_score": 0.07868442189919397,
         "is_upset": false
       },
       {
@@ -134,7 +134,7 @@
         "round_num": 3,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.16794804807046354,
+        "leverage_score": 0.20307879765043985,
         "is_upset": true
       },
       {
@@ -142,7 +142,7 @@
         "round_num": 4,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.3092350711303135,
+        "leverage_score": 0.3609433089313781,
         "is_upset": false
       },
       {
@@ -150,7 +150,7 @@
         "round_num": 1,
         "winner": "Ohio St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.06541831084687928,
+        "leverage_score": 0.08123516442809631,
         "is_upset": false
       },
       {
@@ -158,7 +158,7 @@
         "round_num": 1,
         "winner": "St. John's",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04540432002127102,
+        "leverage_score": 0.056675636152844225,
         "is_upset": false
       },
       {
@@ -166,7 +166,7 @@
         "round_num": 1,
         "winner": "Kansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04237407357562942,
+        "leverage_score": 0.05293486507776317,
         "is_upset": false
       },
       {
@@ -174,7 +174,7 @@
         "round_num": 1,
         "winner": "South Florida",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.11339853597954107,
+        "leverage_score": 0.13908958356717768,
         "is_upset": true
       },
       {
@@ -182,7 +182,7 @@
         "round_num": 1,
         "winner": "Michigan St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04219423525480255,
+        "leverage_score": 0.05271267323361151,
         "is_upset": false
       },
       {
@@ -190,7 +190,7 @@
         "round_num": 1,
         "winner": "UCLA",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05834558979689667,
+        "leverage_score": 0.07258521159060982,
         "is_upset": false
       },
       {
@@ -198,7 +198,7 @@
         "round_num": 1,
         "winner": "UConn",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.041536877769263646,
+        "leverage_score": 0.05190032521781788,
         "is_upset": false
       },
       {
@@ -206,7 +206,7 @@
         "round_num": 1,
         "winner": "Arizona",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04209282849327542,
+        "leverage_score": 0.052587375106956144,
         "is_upset": false
       },
       {
@@ -214,7 +214,7 @@
         "round_num": 1,
         "winner": "Utah St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.09309600059581438,
+        "leverage_score": 0.11478288816703207,
         "is_upset": true
       },
       {
@@ -222,7 +222,7 @@
         "round_num": 1,
         "winner": "Wisconsin",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.049094481740976734,
+        "leverage_score": 0.0612231041546427,
         "is_upset": false
       },
       {
@@ -230,7 +230,7 @@
         "round_num": 1,
         "winner": "Arkansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04487159007325557,
+        "leverage_score": 0.05601842020100417,
         "is_upset": false
       },
       {
@@ -238,7 +238,7 @@
         "round_num": 1,
         "winner": "NC State",
         "confidence": "👍 Lean",
-        "leverage_score": 0.21427775539765664,
+        "leverage_score": 0.25621874931941896,
         "is_upset": true
       },
       {
@@ -246,7 +246,7 @@
         "round_num": 1,
         "winner": "Gonzaga",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04348804757105338,
+        "leverage_score": 0.05431072654771857,
         "is_upset": false
       },
       {
@@ -254,7 +254,7 @@
         "round_num": 1,
         "winner": "Missouri",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.10878381436085593,
+        "leverage_score": 0.13358689907937255,
         "is_upset": true
       },
       {
@@ -262,7 +262,7 @@
         "round_num": 1,
         "winner": "Florida",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04186436414896613,
+        "leverage_score": 0.052305060477987705,
         "is_upset": false
       },
       {
@@ -270,7 +270,7 @@
         "round_num": 1,
         "winner": "Iowa",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07846347180148365,
+        "leverage_score": 0.09710666798472785,
         "is_upset": true
       },
       {
@@ -278,7 +278,7 @@
         "round_num": 1,
         "winner": "Vanderbilt",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04900117955639428,
+        "leverage_score": 0.061108233252815086,
         "is_upset": false
       },
       {
@@ -286,7 +286,7 @@
         "round_num": 1,
         "winner": "Nebraska",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04687274424918301,
+        "leverage_score": 0.058486252952459156,
         "is_upset": false
       },
       {
@@ -294,7 +294,7 @@
         "round_num": 1,
         "winner": "VCU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.13596799422190414,
+        "leverage_score": 0.16581597544066426,
         "is_upset": true
       },
       {
@@ -302,7 +302,7 @@
         "round_num": 1,
         "winner": "Texas A&M",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.08555315246256193,
+        "leverage_score": 0.10568768865252424,
         "is_upset": true
       },
       {
@@ -310,7 +310,7 @@
         "round_num": 1,
         "winner": "Houston",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04258907505046806,
+        "leverage_score": 0.05320047401622348,
         "is_upset": false
       },
       {
@@ -318,7 +318,7 @@
         "round_num": 1,
         "winner": "Michigan",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04235124632941748,
+        "leverage_score": 0.052906662964611106,
         "is_upset": false
       },
       {
@@ -326,7 +326,7 @@
         "round_num": 1,
         "winner": "Saint Louis",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.09314115952547186,
+        "leverage_score": 0.11483723487096946,
         "is_upset": true
       },
       {
@@ -334,7 +334,7 @@
         "round_num": 1,
         "winner": "Texas Tech",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.0538256239251023,
+        "leverage_score": 0.06704065519636812,
         "is_upset": false
       },
       {
@@ -342,7 +342,7 @@
         "round_num": 1,
         "winner": "Alabama",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.045276239391777114,
+        "leverage_score": 0.05651764282997402,
         "is_upset": false
       },
       {
@@ -350,7 +350,7 @@
         "round_num": 1,
         "winner": "SMU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.26148603559975486,
+        "leverage_score": 0.30903294013012145,
         "is_upset": true
       },
       {
@@ -358,7 +358,7 @@
         "round_num": 1,
         "winner": "Virginia",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.044180039670141225,
+        "leverage_score": 0.0551649996171549,
         "is_upset": false
       },
       {
@@ -366,7 +366,7 @@
         "round_num": 1,
         "winner": "Santa Clara",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.12623521154496753,
+        "leverage_score": 0.15432825156122318,
         "is_upset": true
       },
       {
@@ -374,7 +374,7 @@
         "round_num": 2,
         "winner": "Kansas",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0859920213301906,
+        "leverage_score": 0.10619410931621612,
         "is_upset": false
       },
       {
@@ -382,7 +382,7 @@
         "round_num": 2,
         "winner": "Michigan St.",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05338391468236677,
+        "leverage_score": 0.0664888169167967,
         "is_upset": false
       },
       {
@@ -390,7 +390,7 @@
         "round_num": 2,
         "winner": "UConn",
         "confidence": "👍 Lean",
-        "leverage_score": 0.050573617204919805,
+        "leverage_score": 0.06303506583407745,
         "is_upset": false
       },
       {
@@ -398,7 +398,7 @@
         "round_num": 2,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04409610992135748,
+        "leverage_score": 0.055055024438313616,
         "is_upset": false
       },
       {
@@ -406,7 +406,7 @@
         "round_num": 2,
         "winner": "Wisconsin",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0977755373901556,
+        "leverage_score": 0.12037729893282484,
         "is_upset": true
       },
       {
@@ -414,7 +414,7 @@
         "round_num": 2,
         "winner": "NC State",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.3384066572992877,
+        "leverage_score": 0.36869749978554506,
         "is_upset": true
       },
       {
@@ -422,7 +422,7 @@
         "round_num": 2,
         "winner": "Florida",
         "confidence": "👍 Lean",
-        "leverage_score": 0.044693855217912797,
+        "leverage_score": 0.055792561228531906,
         "is_upset": false
       },
       {
@@ -430,7 +430,7 @@
         "round_num": 2,
         "winner": "Vanderbilt",
         "confidence": "👍 Lean",
-        "leverage_score": 0.071861524149537,
+        "leverage_score": 0.08907102163382166,
         "is_upset": true
       },
       {
@@ -438,7 +438,7 @@
         "round_num": 2,
         "winner": "Houston",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04817385096119971,
+        "leverage_score": 0.060081809576712726,
         "is_upset": false
       },
       {
@@ -446,7 +446,7 @@
         "round_num": 2,
         "winner": "Michigan",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04399288292916168,
+        "leverage_score": 0.05492763284372839,
         "is_upset": false
       },
       {
@@ -454,7 +454,7 @@
         "round_num": 2,
         "winner": "Texas Tech",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.1088233535356378,
+        "leverage_score": 0.13359653199596458,
         "is_upset": true
       },
       {
@@ -462,7 +462,7 @@
         "round_num": 2,
         "winner": "Virginia",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06432180132230031,
+        "leverage_score": 0.07988277404632879,
         "is_upset": false
       },
       {
@@ -470,7 +470,7 @@
         "round_num": 3,
         "winner": "Michigan St.",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.10648220650062039,
+        "leverage_score": 0.1308015439338604,
         "is_upset": true
       },
       {
@@ -478,7 +478,7 @@
         "round_num": 3,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05245057566361103,
+        "leverage_score": 0.06534234239229006,
         "is_upset": false
       },
       {
@@ -486,7 +486,7 @@
         "round_num": 3,
         "winner": "Vanderbilt",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.23862302002991023,
+        "leverage_score": 0.28053958026956405,
         "is_upset": true
       },
       {
@@ -494,7 +494,7 @@
         "round_num": 3,
         "winner": "Michigan",
         "confidence": "👍 Lean",
-        "leverage_score": 0.050751449543421506,
+        "leverage_score": 0.06325376605894918,
         "is_upset": false
       },
       {
@@ -502,14 +502,14 @@
         "round_num": 5,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.507951665921921,
+        "leverage_score": 0.5569524070038341,
         "is_upset": true
       }
     ],
     "champion": "Purdue",
     "final_four": [
-      "Iowa St.",
       "Duke",
+      "Iowa St.",
       "Illinois",
       "Purdue"
     ],
@@ -525,9 +525,9 @@
     ],
     "label": "optimal",
     "expected_score": 706.39,
-    "p_first_place": 0.18033333333333335,
-    "p_top_three": 0.24033333333333334,
-    "expected_finish": 13.422333333333333
+    "p_first_place": 0.189,
+    "p_top_three": 0.25466666666666665,
+    "expected_finish": 10.841666666666667
   },
   "safe_alternate": {
     "picks": [
@@ -536,7 +536,7 @@
         "round_num": 1,
         "winner": "Illinois",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04392166342934726,
+        "leverage_score": 0.05484606683497827,
         "is_upset": false
       },
       {
@@ -544,7 +544,7 @@
         "round_num": 2,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06334063904690637,
+        "leverage_score": 0.07868442189919397,
         "is_upset": false
       },
       {
@@ -552,7 +552,7 @@
         "round_num": 3,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.16794804807046354,
+        "leverage_score": 0.20307879765043985,
         "is_upset": true
       },
       {
@@ -560,7 +560,7 @@
         "round_num": 4,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.3092350711303135,
+        "leverage_score": 0.3609433089313781,
         "is_upset": false
       },
       {
@@ -568,7 +568,7 @@
         "round_num": 5,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.507951665921921,
+        "leverage_score": 0.5569524070038341,
         "is_upset": true
       },
       {
@@ -576,47 +576,15 @@
         "round_num": 6,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.04553591056119085,
+        "leverage_score": 0.047670122750566084,
         "is_upset": true
-      },
-      {
-        "slot_id": 25,
-        "round_num": 1,
-        "winner": "Michigan",
-        "confidence": "🔒 Lock",
-        "leverage_score": 0.04235124632941748,
-        "is_upset": false
-      },
-      {
-        "slot_id": 45,
-        "round_num": 2,
-        "winner": "Michigan",
-        "confidence": "🔒 Lock",
-        "leverage_score": 0.04399288292916168,
-        "is_upset": false
-      },
-      {
-        "slot_id": 55,
-        "round_num": 3,
-        "winner": "Michigan",
-        "confidence": "👍 Lean",
-        "leverage_score": 0.050751449543421506,
-        "is_upset": false
-      },
-      {
-        "slot_id": 60,
-        "round_num": 4,
-        "winner": "Michigan",
-        "confidence": "👍 Lean",
-        "leverage_score": 0.06539287510938444,
-        "is_upset": false
       },
       {
         "slot_id": 8,
         "round_num": 1,
         "winner": "UConn",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.041536877769263646,
+        "leverage_score": 0.05190032521781788,
         "is_upset": false
       },
       {
@@ -624,7 +592,7 @@
         "round_num": 2,
         "winner": "UConn",
         "confidence": "👍 Lean",
-        "leverage_score": 0.050573617204919805,
+        "leverage_score": 0.06303506583407745,
         "is_upset": false
       },
       {
@@ -632,7 +600,7 @@
         "round_num": 3,
         "winner": "UConn",
         "confidence": "👍 Lean",
-        "leverage_score": 0.0786435309579068,
+        "leverage_score": 0.09730506257600115,
         "is_upset": false
       },
       {
@@ -640,15 +608,47 @@
         "round_num": 4,
         "winner": "UConn",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.2369005936393866,
+        "leverage_score": 0.2815152801659973,
         "is_upset": true
+      },
+      {
+        "slot_id": 25,
+        "round_num": 1,
+        "winner": "Michigan",
+        "confidence": "🔒 Lock",
+        "leverage_score": 0.052906662964611106,
+        "is_upset": false
+      },
+      {
+        "slot_id": 45,
+        "round_num": 2,
+        "winner": "Michigan",
+        "confidence": "🔒 Lock",
+        "leverage_score": 0.05492763284372839,
+        "is_upset": false
+      },
+      {
+        "slot_id": 55,
+        "round_num": 3,
+        "winner": "Michigan",
+        "confidence": "👍 Lean",
+        "leverage_score": 0.06325376605894918,
+        "is_upset": false
+      },
+      {
+        "slot_id": 60,
+        "round_num": 4,
+        "winner": "Michigan",
+        "confidence": "👍 Lean",
+        "leverage_score": 0.08119023906342877,
+        "is_upset": false
       },
       {
         "slot_id": 16,
         "round_num": 1,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04260797628133263,
+        "leverage_score": 0.053223822834073835,
         "is_upset": false
       },
       {
@@ -656,7 +656,7 @@
         "round_num": 2,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05113433516686941,
+        "leverage_score": 0.06372457389501589,
         "is_upset": false
       },
       {
@@ -664,7 +664,7 @@
         "round_num": 3,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07983639184668831,
+        "leverage_score": 0.0987503098415656,
         "is_upset": false
       },
       {
@@ -672,7 +672,7 @@
         "round_num": 4,
         "winner": "Purdue",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.20609783110137014,
+        "leverage_score": 0.24681268836607256,
         "is_upset": true
       },
       {
@@ -680,7 +680,7 @@
         "round_num": 1,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04069870229745803,
+        "leverage_score": 0.05086412295526862,
         "is_upset": false
       },
       {
@@ -688,7 +688,7 @@
         "round_num": 1,
         "winner": "Ohio St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.06541831084687928,
+        "leverage_score": 0.08123516442809631,
         "is_upset": false
       },
       {
@@ -696,7 +696,7 @@
         "round_num": 1,
         "winner": "St. John's",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04540432002127102,
+        "leverage_score": 0.056675636152844225,
         "is_upset": false
       },
       {
@@ -704,7 +704,7 @@
         "round_num": 1,
         "winner": "Kansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04237407357562942,
+        "leverage_score": 0.05293486507776317,
         "is_upset": false
       },
       {
@@ -712,7 +712,7 @@
         "round_num": 1,
         "winner": "South Florida",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.11339853597954107,
+        "leverage_score": 0.13908958356717768,
         "is_upset": true
       },
       {
@@ -720,7 +720,7 @@
         "round_num": 1,
         "winner": "Michigan St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04219423525480255,
+        "leverage_score": 0.05271267323361151,
         "is_upset": false
       },
       {
@@ -728,7 +728,7 @@
         "round_num": 1,
         "winner": "UCLA",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05834558979689667,
+        "leverage_score": 0.07258521159060982,
         "is_upset": false
       },
       {
@@ -736,7 +736,7 @@
         "round_num": 1,
         "winner": "Arizona",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04209282849327542,
+        "leverage_score": 0.052587375106956144,
         "is_upset": false
       },
       {
@@ -744,7 +744,7 @@
         "round_num": 1,
         "winner": "Utah St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.09309600059581438,
+        "leverage_score": 0.11478288816703207,
         "is_upset": true
       },
       {
@@ -752,7 +752,7 @@
         "round_num": 1,
         "winner": "Wisconsin",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.049094481740976734,
+        "leverage_score": 0.0612231041546427,
         "is_upset": false
       },
       {
@@ -760,7 +760,7 @@
         "round_num": 1,
         "winner": "Arkansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04487159007325557,
+        "leverage_score": 0.05601842020100417,
         "is_upset": false
       },
       {
@@ -768,7 +768,7 @@
         "round_num": 1,
         "winner": "NC State",
         "confidence": "👍 Lean",
-        "leverage_score": 0.21427775539765664,
+        "leverage_score": 0.25621874931941896,
         "is_upset": true
       },
       {
@@ -776,7 +776,7 @@
         "round_num": 1,
         "winner": "Gonzaga",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04348804757105338,
+        "leverage_score": 0.05431072654771857,
         "is_upset": false
       },
       {
@@ -784,7 +784,7 @@
         "round_num": 1,
         "winner": "Missouri",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.10878381436085593,
+        "leverage_score": 0.13358689907937255,
         "is_upset": true
       },
       {
@@ -792,7 +792,7 @@
         "round_num": 1,
         "winner": "Florida",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04186436414896613,
+        "leverage_score": 0.052305060477987705,
         "is_upset": false
       },
       {
@@ -800,7 +800,7 @@
         "round_num": 1,
         "winner": "Iowa",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07846347180148365,
+        "leverage_score": 0.09710666798472785,
         "is_upset": true
       },
       {
@@ -808,7 +808,7 @@
         "round_num": 1,
         "winner": "Vanderbilt",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04900117955639428,
+        "leverage_score": 0.061108233252815086,
         "is_upset": false
       },
       {
@@ -816,7 +816,7 @@
         "round_num": 1,
         "winner": "Nebraska",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04687274424918301,
+        "leverage_score": 0.058486252952459156,
         "is_upset": false
       },
       {
@@ -824,7 +824,7 @@
         "round_num": 1,
         "winner": "VCU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.13596799422190414,
+        "leverage_score": 0.16581597544066426,
         "is_upset": true
       },
       {
@@ -832,7 +832,7 @@
         "round_num": 1,
         "winner": "Saint Mary's",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07554129873018098,
+        "leverage_score": 0.09356066829262633,
         "is_upset": false
       },
       {
@@ -840,7 +840,7 @@
         "round_num": 1,
         "winner": "Houston",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04258907505046806,
+        "leverage_score": 0.05320047401622348,
         "is_upset": false
       },
       {
@@ -848,7 +848,7 @@
         "round_num": 1,
         "winner": "Georgia",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07191339096376599,
+        "leverage_score": 0.08915082590216623,
         "is_upset": false
       },
       {
@@ -856,7 +856,7 @@
         "round_num": 1,
         "winner": "Texas Tech",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.0538256239251023,
+        "leverage_score": 0.06704065519636812,
         "is_upset": false
       },
       {
@@ -864,7 +864,7 @@
         "round_num": 1,
         "winner": "Alabama",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.045276239391777114,
+        "leverage_score": 0.05651764282997402,
         "is_upset": false
       },
       {
@@ -872,7 +872,7 @@
         "round_num": 1,
         "winner": "SMU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.26148603559975486,
+        "leverage_score": 0.30903294013012145,
         "is_upset": true
       },
       {
@@ -880,7 +880,7 @@
         "round_num": 1,
         "winner": "Virginia",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.044180039670141225,
+        "leverage_score": 0.0551649996171549,
         "is_upset": false
       },
       {
@@ -888,7 +888,7 @@
         "round_num": 1,
         "winner": "Santa Clara",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.12623521154496753,
+        "leverage_score": 0.15432825156122318,
         "is_upset": true
       },
       {
@@ -896,7 +896,7 @@
         "round_num": 1,
         "winner": "Iowa St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.043669357980086074,
+        "leverage_score": 0.05453458629817429,
         "is_upset": false
       },
       {
@@ -904,7 +904,7 @@
         "round_num": 2,
         "winner": "Duke",
         "confidence": "👍 Lean",
-        "leverage_score": 0.042196783292324305,
+        "leverage_score": 0.0527099741753072,
         "is_upset": false
       },
       {
@@ -912,7 +912,7 @@
         "round_num": 2,
         "winner": "Kansas",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0859920213301906,
+        "leverage_score": 0.10619410931621612,
         "is_upset": false
       },
       {
@@ -920,7 +920,7 @@
         "round_num": 2,
         "winner": "Michigan St.",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05338391468236677,
+        "leverage_score": 0.0664888169167967,
         "is_upset": false
       },
       {
@@ -928,7 +928,7 @@
         "round_num": 2,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04409610992135748,
+        "leverage_score": 0.055055024438313616,
         "is_upset": false
       },
       {
@@ -936,7 +936,7 @@
         "round_num": 2,
         "winner": "Wisconsin",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0977755373901556,
+        "leverage_score": 0.12037729893282484,
         "is_upset": true
       },
       {
@@ -944,7 +944,7 @@
         "round_num": 2,
         "winner": "NC State",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.3384066572992877,
+        "leverage_score": 0.36869749978554506,
         "is_upset": true
       },
       {
@@ -952,7 +952,7 @@
         "round_num": 2,
         "winner": "Florida",
         "confidence": "👍 Lean",
-        "leverage_score": 0.044693855217912797,
+        "leverage_score": 0.055792561228531906,
         "is_upset": false
       },
       {
@@ -960,7 +960,7 @@
         "round_num": 2,
         "winner": "Vanderbilt",
         "confidence": "👍 Lean",
-        "leverage_score": 0.071861524149537,
+        "leverage_score": 0.08907102163382166,
         "is_upset": true
       },
       {
@@ -968,7 +968,7 @@
         "round_num": 2,
         "winner": "Houston",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04817385096119971,
+        "leverage_score": 0.060081809576712726,
         "is_upset": false
       },
       {
@@ -976,7 +976,7 @@
         "round_num": 2,
         "winner": "Texas Tech",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.1088233535356378,
+        "leverage_score": 0.13359653199596458,
         "is_upset": true
       },
       {
@@ -984,7 +984,7 @@
         "round_num": 2,
         "winner": "Virginia",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06432180132230031,
+        "leverage_score": 0.07988277404632879,
         "is_upset": false
       },
       {
@@ -992,7 +992,7 @@
         "round_num": 2,
         "winner": "Iowa St.",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0560487340912179,
+        "leverage_score": 0.06975908453532698,
         "is_upset": false
       },
       {
@@ -1000,7 +1000,7 @@
         "round_num": 3,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04973392850612139,
+        "leverage_score": 0.0620021314954983,
         "is_upset": false
       },
       {
@@ -1008,7 +1008,7 @@
         "round_num": 3,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05245057566361103,
+        "leverage_score": 0.06534234239229006,
         "is_upset": false
       },
       {
@@ -1016,7 +1016,7 @@
         "round_num": 3,
         "winner": "Vanderbilt",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.23862302002991023,
+        "leverage_score": 0.28053958026956405,
         "is_upset": true
       },
       {
@@ -1024,7 +1024,7 @@
         "round_num": 3,
         "winner": "Virginia",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.13772096563820174,
+        "leverage_score": 0.16781970671217802,
         "is_upset": true
       },
       {
@@ -1032,14 +1032,14 @@
         "round_num": 5,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.3543489714573693,
+        "leverage_score": 0.4090679201499419,
         "is_upset": false
       }
     ],
     "champion": "Illinois",
     "final_four": [
-      "Michigan",
       "UConn",
+      "Michigan",
       "Illinois",
       "Purdue"
     ],
@@ -1055,9 +1055,9 @@
     ],
     "label": "safe_alternate",
     "expected_score": 702.65,
-    "p_first_place": 0.168,
-    "p_top_three": 0.24266666666666667,
-    "expected_finish": 13.287666666666667
+    "p_first_place": 0.17933333333333334,
+    "p_top_three": 0.25566666666666665,
+    "expected_finish": 10.732
   },
   "aggressive_alternate": {
     "picks": [
@@ -1066,7 +1066,7 @@
         "round_num": 1,
         "winner": "Illinois",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04392166342934726,
+        "leverage_score": 0.05484606683497827,
         "is_upset": false
       },
       {
@@ -1074,7 +1074,7 @@
         "round_num": 2,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06334063904690637,
+        "leverage_score": 0.07868442189919397,
         "is_upset": false
       },
       {
@@ -1082,7 +1082,7 @@
         "round_num": 3,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.16794804807046354,
+        "leverage_score": 0.20307879765043985,
         "is_upset": true
       },
       {
@@ -1090,7 +1090,7 @@
         "round_num": 4,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.3092350711303135,
+        "leverage_score": 0.3609433089313781,
         "is_upset": false
       },
       {
@@ -1098,7 +1098,7 @@
         "round_num": 5,
         "winner": "Illinois",
         "confidence": "👍 Lean",
-        "leverage_score": 0.507951665921921,
+        "leverage_score": 0.5569524070038341,
         "is_upset": false
       },
       {
@@ -1106,39 +1106,7 @@
         "round_num": 6,
         "winner": "Illinois",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.04553591056119085,
-        "is_upset": true
-      },
-      {
-        "slot_id": 28,
-        "round_num": 1,
-        "winner": "Alabama",
-        "confidence": "🔒 Lock",
-        "leverage_score": 0.045276239391777114,
-        "is_upset": false
-      },
-      {
-        "slot_id": 46,
-        "round_num": 2,
-        "winner": "Alabama",
-        "confidence": "🎲 Gamble",
-        "leverage_score": 0.06977739460512197,
-        "is_upset": false
-      },
-      {
-        "slot_id": 55,
-        "round_num": 3,
-        "winner": "Alabama",
-        "confidence": "🎲 Gamble",
-        "leverage_score": 0.2739486459742278,
-        "is_upset": true
-      },
-      {
-        "slot_id": 60,
-        "round_num": 4,
-        "winner": "Alabama",
-        "confidence": "🎲 Gamble",
-        "leverage_score": 0.3715523620807734,
+        "leverage_score": 0.047670122750566084,
         "is_upset": true
       },
       {
@@ -1146,7 +1114,7 @@
         "round_num": 1,
         "winner": "UConn",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.041536877769263646,
+        "leverage_score": 0.05190032521781788,
         "is_upset": false
       },
       {
@@ -1154,7 +1122,7 @@
         "round_num": 2,
         "winner": "UConn",
         "confidence": "👍 Lean",
-        "leverage_score": 0.050573617204919805,
+        "leverage_score": 0.06303506583407745,
         "is_upset": false
       },
       {
@@ -1162,7 +1130,7 @@
         "round_num": 3,
         "winner": "UConn",
         "confidence": "👍 Lean",
-        "leverage_score": 0.0786435309579068,
+        "leverage_score": 0.09730506257600115,
         "is_upset": false
       },
       {
@@ -1170,7 +1138,39 @@
         "round_num": 4,
         "winner": "UConn",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.2369005936393866,
+        "leverage_score": 0.2815152801659973,
+        "is_upset": true
+      },
+      {
+        "slot_id": 28,
+        "round_num": 1,
+        "winner": "Alabama",
+        "confidence": "🔒 Lock",
+        "leverage_score": 0.05651764282997402,
+        "is_upset": false
+      },
+      {
+        "slot_id": 46,
+        "round_num": 2,
+        "winner": "Alabama",
+        "confidence": "🎲 Gamble",
+        "leverage_score": 0.08653482314248852,
+        "is_upset": false
+      },
+      {
+        "slot_id": 55,
+        "round_num": 3,
+        "winner": "Alabama",
+        "confidence": "🎲 Gamble",
+        "leverage_score": 0.32255216303806344,
+        "is_upset": true
+      },
+      {
+        "slot_id": 60,
+        "round_num": 4,
+        "winner": "Alabama",
+        "confidence": "🎲 Gamble",
+        "leverage_score": 0.4184732350720709,
         "is_upset": true
       },
       {
@@ -1178,7 +1178,7 @@
         "round_num": 1,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04260797628133263,
+        "leverage_score": 0.053223822834073835,
         "is_upset": false
       },
       {
@@ -1186,7 +1186,7 @@
         "round_num": 2,
         "winner": "Purdue",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05113433516686941,
+        "leverage_score": 0.06372457389501589,
         "is_upset": false
       },
       {
@@ -1194,7 +1194,7 @@
         "round_num": 3,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07983639184668831,
+        "leverage_score": 0.0987503098415656,
         "is_upset": false
       },
       {
@@ -1202,7 +1202,7 @@
         "round_num": 4,
         "winner": "Purdue",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.20609783110137014,
+        "leverage_score": 0.24681268836607256,
         "is_upset": true
       },
       {
@@ -1210,7 +1210,7 @@
         "round_num": 1,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04069870229745803,
+        "leverage_score": 0.05086412295526862,
         "is_upset": false
       },
       {
@@ -1218,7 +1218,7 @@
         "round_num": 1,
         "winner": "Ohio St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.06541831084687928,
+        "leverage_score": 0.08123516442809631,
         "is_upset": false
       },
       {
@@ -1226,7 +1226,7 @@
         "round_num": 1,
         "winner": "St. John's",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04540432002127102,
+        "leverage_score": 0.056675636152844225,
         "is_upset": false
       },
       {
@@ -1234,7 +1234,7 @@
         "round_num": 1,
         "winner": "Kansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04237407357562942,
+        "leverage_score": 0.05293486507776317,
         "is_upset": false
       },
       {
@@ -1242,7 +1242,7 @@
         "round_num": 1,
         "winner": "South Florida",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.11339853597954107,
+        "leverage_score": 0.13908958356717768,
         "is_upset": true
       },
       {
@@ -1250,7 +1250,7 @@
         "round_num": 1,
         "winner": "Michigan St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04219423525480255,
+        "leverage_score": 0.05271267323361151,
         "is_upset": false
       },
       {
@@ -1258,7 +1258,7 @@
         "round_num": 1,
         "winner": "UCLA",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.05834558979689667,
+        "leverage_score": 0.07258521159060982,
         "is_upset": false
       },
       {
@@ -1266,7 +1266,7 @@
         "round_num": 1,
         "winner": "Arizona",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04209282849327542,
+        "leverage_score": 0.052587375106956144,
         "is_upset": false
       },
       {
@@ -1274,7 +1274,7 @@
         "round_num": 1,
         "winner": "Utah St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.09309600059581438,
+        "leverage_score": 0.11478288816703207,
         "is_upset": true
       },
       {
@@ -1282,7 +1282,7 @@
         "round_num": 1,
         "winner": "Wisconsin",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.049094481740976734,
+        "leverage_score": 0.0612231041546427,
         "is_upset": false
       },
       {
@@ -1290,7 +1290,7 @@
         "round_num": 1,
         "winner": "Arkansas",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04487159007325557,
+        "leverage_score": 0.05601842020100417,
         "is_upset": false
       },
       {
@@ -1298,7 +1298,7 @@
         "round_num": 1,
         "winner": "NC State",
         "confidence": "👍 Lean",
-        "leverage_score": 0.21427775539765664,
+        "leverage_score": 0.25621874931941896,
         "is_upset": true
       },
       {
@@ -1306,7 +1306,7 @@
         "round_num": 1,
         "winner": "Gonzaga",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04348804757105338,
+        "leverage_score": 0.05431072654771857,
         "is_upset": false
       },
       {
@@ -1314,7 +1314,7 @@
         "round_num": 1,
         "winner": "Missouri",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.10878381436085593,
+        "leverage_score": 0.13358689907937255,
         "is_upset": true
       },
       {
@@ -1322,7 +1322,7 @@
         "round_num": 1,
         "winner": "Florida",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04186436414896613,
+        "leverage_score": 0.052305060477987705,
         "is_upset": false
       },
       {
@@ -1330,7 +1330,7 @@
         "round_num": 1,
         "winner": "Iowa",
         "confidence": "👍 Lean",
-        "leverage_score": 0.07846347180148365,
+        "leverage_score": 0.09710666798472785,
         "is_upset": true
       },
       {
@@ -1338,7 +1338,7 @@
         "round_num": 1,
         "winner": "Vanderbilt",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04900117955639428,
+        "leverage_score": 0.061108233252815086,
         "is_upset": false
       },
       {
@@ -1346,7 +1346,7 @@
         "round_num": 1,
         "winner": "Nebraska",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04687274424918301,
+        "leverage_score": 0.058486252952459156,
         "is_upset": false
       },
       {
@@ -1354,7 +1354,7 @@
         "round_num": 1,
         "winner": "VCU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.13596799422190414,
+        "leverage_score": 0.16581597544066426,
         "is_upset": true
       },
       {
@@ -1362,7 +1362,7 @@
         "round_num": 1,
         "winner": "Texas A&M",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.08555315246256193,
+        "leverage_score": 0.10568768865252424,
         "is_upset": true
       },
       {
@@ -1370,7 +1370,7 @@
         "round_num": 1,
         "winner": "Houston",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04258907505046806,
+        "leverage_score": 0.05320047401622348,
         "is_upset": false
       },
       {
@@ -1378,7 +1378,7 @@
         "round_num": 1,
         "winner": "Michigan",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04235124632941748,
+        "leverage_score": 0.052906662964611106,
         "is_upset": false
       },
       {
@@ -1386,7 +1386,7 @@
         "round_num": 1,
         "winner": "Saint Louis",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.09314115952547186,
+        "leverage_score": 0.11483723487096946,
         "is_upset": true
       },
       {
@@ -1394,7 +1394,7 @@
         "round_num": 1,
         "winner": "Texas Tech",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.0538256239251023,
+        "leverage_score": 0.06704065519636812,
         "is_upset": false
       },
       {
@@ -1402,7 +1402,7 @@
         "round_num": 1,
         "winner": "SMU",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.26148603559975486,
+        "leverage_score": 0.30903294013012145,
         "is_upset": true
       },
       {
@@ -1410,7 +1410,7 @@
         "round_num": 1,
         "winner": "Virginia",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.044180039670141225,
+        "leverage_score": 0.0551649996171549,
         "is_upset": false
       },
       {
@@ -1418,7 +1418,7 @@
         "round_num": 1,
         "winner": "Santa Clara",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.12623521154496753,
+        "leverage_score": 0.15432825156122318,
         "is_upset": true
       },
       {
@@ -1426,7 +1426,7 @@
         "round_num": 1,
         "winner": "Iowa St.",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.043669357980086074,
+        "leverage_score": 0.05453458629817429,
         "is_upset": false
       },
       {
@@ -1434,7 +1434,7 @@
         "round_num": 2,
         "winner": "Duke",
         "confidence": "👍 Lean",
-        "leverage_score": 0.042196783292324305,
+        "leverage_score": 0.0527099741753072,
         "is_upset": false
       },
       {
@@ -1442,7 +1442,7 @@
         "round_num": 2,
         "winner": "Kansas",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0859920213301906,
+        "leverage_score": 0.10619410931621612,
         "is_upset": false
       },
       {
@@ -1450,7 +1450,7 @@
         "round_num": 2,
         "winner": "Michigan St.",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05338391468236677,
+        "leverage_score": 0.0664888169167967,
         "is_upset": false
       },
       {
@@ -1458,7 +1458,7 @@
         "round_num": 2,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04409610992135748,
+        "leverage_score": 0.055055024438313616,
         "is_upset": false
       },
       {
@@ -1466,7 +1466,7 @@
         "round_num": 2,
         "winner": "Wisconsin",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0977755373901556,
+        "leverage_score": 0.12037729893282484,
         "is_upset": true
       },
       {
@@ -1474,7 +1474,7 @@
         "round_num": 2,
         "winner": "NC State",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.3384066572992877,
+        "leverage_score": 0.36869749978554506,
         "is_upset": true
       },
       {
@@ -1482,7 +1482,7 @@
         "round_num": 2,
         "winner": "Florida",
         "confidence": "👍 Lean",
-        "leverage_score": 0.044693855217912797,
+        "leverage_score": 0.055792561228531906,
         "is_upset": false
       },
       {
@@ -1490,7 +1490,7 @@
         "round_num": 2,
         "winner": "Nebraska",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.10138780446040796,
+        "leverage_score": 0.12470786552662681,
         "is_upset": false
       },
       {
@@ -1498,7 +1498,7 @@
         "round_num": 2,
         "winner": "Houston",
         "confidence": "👍 Lean",
-        "leverage_score": 0.04817385096119971,
+        "leverage_score": 0.060081809576712726,
         "is_upset": false
       },
       {
@@ -1506,7 +1506,7 @@
         "round_num": 2,
         "winner": "Michigan",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04399288292916168,
+        "leverage_score": 0.05492763284372839,
         "is_upset": false
       },
       {
@@ -1514,7 +1514,7 @@
         "round_num": 2,
         "winner": "Virginia",
         "confidence": "👍 Lean",
-        "leverage_score": 0.06432180132230031,
+        "leverage_score": 0.07988277404632879,
         "is_upset": false
       },
       {
@@ -1522,7 +1522,7 @@
         "round_num": 2,
         "winner": "Iowa St.",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.0560487340912179,
+        "leverage_score": 0.06975908453532698,
         "is_upset": false
       },
       {
@@ -1530,7 +1530,7 @@
         "round_num": 3,
         "winner": "Duke",
         "confidence": "🔒 Lock",
-        "leverage_score": 0.04973392850612139,
+        "leverage_score": 0.0620021314954983,
         "is_upset": false
       },
       {
@@ -1538,7 +1538,7 @@
         "round_num": 3,
         "winner": "Arizona",
         "confidence": "👍 Lean",
-        "leverage_score": 0.05245057566361103,
+        "leverage_score": 0.06534234239229006,
         "is_upset": false
       },
       {
@@ -1546,7 +1546,7 @@
         "round_num": 3,
         "winner": "Nebraska",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.3937245868675749,
+        "leverage_score": 0.4502173321849002,
         "is_upset": true
       },
       {
@@ -1554,7 +1554,7 @@
         "round_num": 3,
         "winner": "Virginia",
         "confidence": "🎲 Gamble",
-        "leverage_score": 0.13772096563820174,
+        "leverage_score": 0.16781970671217802,
         "is_upset": true
       },
       {
@@ -1562,14 +1562,14 @@
         "round_num": 5,
         "winner": "Purdue",
         "confidence": "👍 Lean",
-        "leverage_score": 0.3543489714573693,
+        "leverage_score": 0.4090679201499419,
         "is_upset": false
       }
     ],
     "champion": "Illinois",
     "final_four": [
-      "Alabama",
       "UConn",
+      "Alabama",
       "Illinois",
       "Purdue"
     ],
@@ -1585,50 +1585,56 @@
     ],
     "label": "aggressive_alternate",
     "expected_score": 667.6433333333333,
-    "p_first_place": 0.16033333333333333,
-    "p_top_three": 0.227,
-    "expected_finish": 14.684333333333333
+    "p_first_place": 0.166,
+    "p_top_three": 0.239,
+    "expected_finish": 11.848333333333333
   },
   "champion": "Purdue",
   "final_four": [
-    "Iowa St.",
     "Duke",
+    "Iowa St.",
     "Illinois",
     "Purdue"
   ],
-  "p_first_place": 0.18033333333333335,
+  "p_first_place": 0.189,
   "expected_score": 706.39,
-  "total_brackets_evaluated": 24,
+  "total_brackets_evaluated": 72,
   "champion_distribution": {
-    "Duke": 5,
-    "Illinois": 5,
-    "Purdue": 3,
-    "Michigan": 3,
-    "Arizona": 2,
-    "Vanderbilt": 2,
-    "Houston": 2,
-    "Santa Clara": 2
+    "Purdue": 6,
+    "Duke": 6,
+    "Illinois": 6,
+    "Michigan": 6,
+    "Houston": 6,
+    "UConn": 6,
+    "Florida": 6,
+    "Arizona": 6,
+    "Iowa St.": 6,
+    "Virginia": 6,
+    "Arkansas": 6,
+    "Alabama": 6
   },
   "final_four_frequency": {
-    "Purdue": 22,
-    "Duke": 15,
-    "Illinois": 15,
-    "Iowa St.": 9,
-    "Louisville": 7,
-    "Texas Tech": 6,
-    "Michigan": 5,
-    "Houston": 5,
-    "UConn": 2,
-    "Alabama": 2,
-    "Arizona": 2,
-    "Vanderbilt": 2,
-    "Santa Clara": 2,
-    "Nebraska": 1,
-    "Florida": 1
+    "Purdue": 60,
+    "Iowa St.": 30,
+    "Illinois": 30,
+    "Duke": 26,
+    "UConn": 26,
+    "Houston": 18,
+    "Michigan": 14,
+    "Alabama": 14,
+    "Florida": 12,
+    "UCLA": 10,
+    "Louisville": 10,
+    "Texas Tech": 8,
+    "Nebraska": 6,
+    "Vanderbilt": 6,
+    "Arizona": 6,
+    "Virginia": 6,
+    "Arkansas": 6
   },
   "aggregate_stats": {
-    "mean_p_first": 0.12669444444444444,
-    "max_p_first": 0.18033333333333335,
-    "mean_expected_score": 695.8352777777777
+    "mean_p_first": 0.1290925925925926,
+    "max_p_first": 0.189,
+    "mean_expected_score": 672.6009259259258
   }
 }

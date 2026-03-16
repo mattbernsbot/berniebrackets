@@ -45,19 +45,19 @@ The pipeline runs in three stages: **collect → analyze → bracket**.
 
 3. **Contrarian** (`src/contrarian.py`) — Builds ownership profiles from Yahoo pick data (or seed-based estimates). Calculates leverage = model probability / public ownership. Higher leverage = more contrarian value.
 
-4. **Optimizer** (`src/optimizer.py`) — The core engine. Returns all ~24 evaluated brackets:
-   - Evaluate top 8 champion candidates (pool-value = title_prob / ownership)
-   - Generate ~24 scenarios (each champion at appropriate chaos levels + FF variants)
+4. **Optimizer** (`src/optimizer.py`) — The core engine. Returns all ~72 evaluated brackets:
+   - Evaluate top 12 champion candidates (seeds 1-4 only, pool-value = title_prob / ownership)
+   - Generate ~72 scenarios (each champion × 3 chaos levels × 2 FF compositions)
    - Build bracket top-down: champion → FF paths → EMV upsets → fill chalk
    - Monte Carlo simulate each bracket against opponent pools sampled from Yahoo ownership
-   - Tag top 3 diverse brackets (optimal, safe, aggressive) but return all ~24
+   - Tag top 3 diverse brackets (optimal, safe, aggressive) but return all ~72
 
 5. **Analyst** (`src/analyst.py`) — Generates 5 output files into `results/<timestamp>/`:
    - `analysis.md` — Comprehensive report with cross-bracket stats (champion distribution, FF frequency, upset consensus, all-brackets comparison table, model vs public)
    - `bracket.txt` — ASCII bracket visualization (optimal only)
    - `summary.json` — Machine-readable summary with aggregate stats
    - `all_brackets.json` — Every evaluated bracket with full picks and stats
-   - `bracket.html` — Interactive bracket viewer with dropdown to browse all ~24 brackets
+   - `bracket.html` — Interactive bracket viewer with dropdown to browse all ~72 brackets
 
 ### Upset Model (`upset_model/`)
 
