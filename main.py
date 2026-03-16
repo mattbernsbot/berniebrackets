@@ -220,44 +220,47 @@ def cmd_analyze(config) -> None:
     save_json([p.to_dict() for p in ownership_profiles], ownership_file)
     logger.info(f"Updated and saved ownership profiles with leverage scores")
     
-    # Optimize brackets
-    optimal_brackets = optimize_bracket(teams, matchup_matrix, ownership_profiles, bracket, config)
-    
-    # Save optimal brackets
-    brackets_file = f"{config.data_dir}/optimal_brackets.json"
-    save_json([b.to_dict() for b in optimal_brackets], brackets_file)
-    logger.info(f"Saved {len(optimal_brackets)} optimal brackets to {brackets_file}")
-    
+    # Optimize brackets (returns all ~24 evaluated brackets, sorted by P(1st))
+    all_brackets = optimize_bracket(teams, matchup_matrix, ownership_profiles, bracket, config)
+
+    # Save all brackets for standalone cmd_bracket workflow
+    brackets_file = f"{config.data_dir}/all_brackets.json"
+    save_json([b.to_dict() for b in all_brackets], brackets_file)
+    logger.info(f"Saved {len(all_brackets)} evaluated brackets to {brackets_file}")
+
     logger.info("✓ Analysis complete")
+    return all_brackets
 
 
-def cmd_bracket(config) -> None:
+def cmd_bracket(config, brackets=None) -> None:
     """Execute the 'bracket' command — generate output from existing data."""
     from src.utils import load_json
     from src.models import Team, BracketStructure, OwnershipProfile, CompleteBracket
     from src.analyst import generate_all_output
-    
+
     logger = logging.getLogger("bracket_optimizer")
     logger.info("Generating output files")
-    
-    # Load all data
+
+    # Load supporting data
     teams_data = load_json(f"{config.data_dir}/teams.json")
     teams = [Team.from_dict(t) for t in teams_data]
-    
+
     bracket_data = load_json(f"{config.data_dir}/bracket_structure.json")
     bracket = BracketStructure.from_dict(bracket_data)
-    
+
     ownership_data = load_json(f"{config.data_dir}/ownership.json")
     ownership_profiles = [OwnershipProfile.from_dict(p) for p in ownership_data]
-    
+
     matchup_matrix = load_json(f"{config.data_dir}/matchup_probabilities.json")
-    
-    brackets_data = load_json(f"{config.data_dir}/optimal_brackets.json")
-    brackets = [CompleteBracket.from_dict(b) for b in brackets_data]
-    
+
+    # Load brackets from file if not passed in-memory (standalone mode)
+    if brackets is None:
+        brackets_data = load_json(f"{config.data_dir}/all_brackets.json")
+        brackets = [CompleteBracket.from_dict(b) for b in brackets_data]
+
     # Generate output
     generate_all_output(brackets, teams, ownership_profiles, matchup_matrix, bracket, config)
-    
+
     logger.info("✓ Output generation complete")
 
 
@@ -285,13 +288,13 @@ def cmd_full(config) -> None:
     logger.info("Cleared previous run data (preserved real bracket)")
     
     cmd_collect(config)
-    cmd_analyze(config)
-    
+    all_brackets = cmd_analyze(config)
+
     # Set output_dir to results/<timestamp>/ for this run
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
     config.output_dir = f"results/{timestamp}"
-    
-    cmd_bracket(config)
+
+    cmd_bracket(config, brackets=all_brackets)
     
     logger.info("✓ Full pipeline complete")
     logger.info(f"Results available in {config.output_dir}/")

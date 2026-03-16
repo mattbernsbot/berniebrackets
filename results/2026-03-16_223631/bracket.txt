@@ -7,214 +7,214 @@
 
   Duke                      (1)  ✓
   Siena                     (16)
-    → Winner: Duke 🔒 Lock
+    -> Winner: Duke 🔒 Lock
 
-  Ohio St.                  (8) 
-  TCU                       (9)  ✓
-    → Winner: TCU 🎲 Gamble [UPSET]
+  Ohio St.                  (8)  ✓
+  TCU                       (9) 
+    -> Winner: Ohio St. 🔒 Lock
 
   St. John's                (5)  ✓
   Northern Iowa             (12)
-    → Winner: St. John's 🔒 Lock
+    -> Winner: St. John's 🔒 Lock
 
   Kansas                    (4)  ✓
   Cal Baptist               (13)
-    → Winner: Kansas 🔒 Lock
+    -> Winner: Kansas 🔒 Lock
 
-  Louisville                (6)  ✓
-  South Florida             (11)
-    → Winner: Louisville 👍 Lean
+  Louisville                (6) 
+  South Florida             (11) ✓
+    -> Winner: South Florida 🎲 Gamble [UPSET]
 
   Michigan St.              (3)  ✓
   North Dakota St.          (14)
-    → Winner: Michigan St. 🔒 Lock
+    -> Winner: Michigan St. 🔒 Lock
 
-  UCLA                      (7) 
-  UCF                       (10) ✓
-    → Winner: UCF 🎲 Gamble [UPSET]
+  UCLA                      (7)  ✓
+  UCF                       (10)
+    -> Winner: UCLA 🔒 Lock
 
   UConn                     (2)  ✓
   Furman                    (15)
-    → Winner: UConn 🔒 Lock
+    -> Winner: UConn 🔒 Lock
 
   Arizona                   (1)  ✓
   Long Island               (16)
-    → Winner: Arizona 🔒 Lock
+    -> Winner: Arizona 🔒 Lock
 
   Villanova                 (8) 
   Utah St.                  (9)  ✓
-    → Winner: Utah St. 👍 Lean [UPSET]
+    -> Winner: Utah St. 🔒 Lock [UPSET]
 
   Wisconsin                 (5)  ✓
   High Point                (12)
-    → Winner: Wisconsin 🔒 Lock
+    -> Winner: Wisconsin 🔒 Lock
 
   Arkansas                  (4)  ✓
   Hawaii                    (13)
-    → Winner: Arkansas 🔒 Lock
+    -> Winner: Arkansas 🔒 Lock
 
   BYU                       (6) 
   NC State                  (11) ✓
-    → Winner: NC State 🎲 Gamble [UPSET]
+    -> Winner: NC State 👍 Lean [UPSET]
 
   Gonzaga                   (3)  ✓
   Kennesaw St.              (14)
-    → Winner: Gonzaga 🔒 Lock
+    -> Winner: Gonzaga 🔒 Lock
 
   Miami (FL)                (7) 
   Missouri                  (10) ✓
-    → Winner: Missouri 🎲 Gamble [UPSET]
+    -> Winner: Missouri 🎲 Gamble [UPSET]
 
   Purdue                    (2)  ✓
   Queens (N.C.)             (15)
-    → Winner: Purdue 🔒 Lock
+    -> Winner: Purdue 🔒 Lock
 
   Florida                   (1)  ✓
   Lehigh                    (16)
-    → Winner: Florida 🔒 Lock
+    -> Winner: Florida 🔒 Lock
 
   Clemson                   (8) 
   Iowa                      (9)  ✓
-    → Winner: Iowa 🔒 Lock [UPSET]
+    -> Winner: Iowa 👍 Lean [UPSET]
 
   Vanderbilt                (5)  ✓
   McNeese                   (12)
-    → Winner: Vanderbilt 🔒 Lock
+    -> Winner: Vanderbilt 🔒 Lock
 
   Nebraska                  (4)  ✓
   Troy                      (13)
-    → Winner: Nebraska 🔒 Lock
+    -> Winner: Nebraska 🔒 Lock
 
-  North Carolina            (6)  ✓
-  VCU                       (11)
-    → Winner: North Carolina 👍 Lean
+  North Carolina            (6) 
+  VCU                       (11) ✓
+    -> Winner: VCU 🎲 Gamble [UPSET]
 
   Illinois                  (3)  ✓
   Penn                      (14)
-    → Winner: Illinois 🔒 Lock
+    -> Winner: Illinois 🔒 Lock
 
-  Saint Mary's              (7)  ✓
-  Texas A&M                 (10)
-    → Winner: Saint Mary's 👍 Lean
+  Saint Mary's              (7) 
+  Texas A&M                 (10) ✓
+    -> Winner: Texas A&M 🎲 Gamble [UPSET]
 
   Houston                   (2)  ✓
   Idaho                     (15)
-    → Winner: Houston 🔒 Lock
+    -> Winner: Houston 🔒 Lock
 
   Michigan                  (1)  ✓
   Howard                    (16)
-    → Winner: Michigan 🔒 Lock
+    -> Winner: Michigan 🔒 Lock
 
   Georgia                   (8) 
   Saint Louis               (9)  ✓
-    → Winner: Saint Louis 🎲 Gamble [UPSET]
+    -> Winner: Saint Louis 🎲 Gamble [UPSET]
 
   Texas Tech                (5)  ✓
   Akron                     (12)
-    → Winner: Texas Tech 🔒 Lock
+    -> Winner: Texas Tech 🔒 Lock
 
   Alabama                   (4)  ✓
   Hofstra                   (13)
-    → Winner: Alabama 🔒 Lock
+    -> Winner: Alabama 🔒 Lock
 
   Tennessee                 (6) 
   SMU                       (11) ✓
-    → Winner: SMU 🎲 Gamble [UPSET]
+    -> Winner: SMU 🎲 Gamble [UPSET]
 
   Virginia                  (3)  ✓
   Wright St.                (14)
-    → Winner: Virginia 🔒 Lock
+    -> Winner: Virginia 🔒 Lock
 
-  Kentucky                  (7)  ✓
-  Santa Clara               (10)
-    → Winner: Kentucky 👍 Lean
+  Kentucky                  (7) 
+  Santa Clara               (10) ✓
+    -> Winner: Santa Clara 🔒 Lock [UPSET]
 
   Iowa St.                  (2)  ✓
   Tennessee St.             (15)
-    → Winner: Iowa St. 🔒 Lock
+    -> Winner: Iowa St. 🔒 Lock
 
 
 ──────────────────────────────────────── ROUND OF 32 ────────────────────────────────────────
 
   Duke                           ✓
       vs
-  TCU                           
-    → Winner: Duke 🔒 Lock
+  Ohio St.                      
+    -> Winner: Duke 👍 Lean
 
   St. John's                    
       vs
   Kansas                         ✓
-    → Winner: Kansas 🎲 Gamble
+    -> Winner: Kansas 🎲 Gamble
 
-  Louisville                    
+  South Florida                 
       vs
   Michigan St.                   ✓
-    → Winner: Michigan St. 👍 Lean
+    -> Winner: Michigan St. 👍 Lean
 
-  UConn                          ✓
+  UCLA                          
       vs
-  UCF                           
-    → Winner: UConn 🔒 Lock
+  UConn                          ✓
+    -> Winner: UConn 👍 Lean
 
   Arizona                        ✓
       vs
   Utah St.                      
-    → Winner: Arizona 🔒 Lock
+    -> Winner: Arizona 👍 Lean
 
-  Wisconsin                     
+  Wisconsin                      ✓
       vs
-  Arkansas                       ✓
-    → Winner: Arkansas 🎲 Gamble
+  Arkansas                      
+    -> Winner: Wisconsin 🎲 Gamble [UPSET]
 
-  NC State                      
+  NC State                       ✓
       vs
-  Gonzaga                        ✓
-    → Winner: Gonzaga 👍 Lean
+  Gonzaga                       
+    -> Winner: NC State 🎲 Gamble [UPSET]
 
   Purdue                         ✓
       vs
   Missouri                      
-    → Winner: Purdue 🔒 Lock
+    -> Winner: Purdue 🔒 Lock
 
   Florida                        ✓
       vs
   Iowa                          
-    → Winner: Florida 👍 Lean
+    -> Winner: Florida 👍 Lean
 
-  Vanderbilt                    
+  Vanderbilt                     ✓
       vs
-  Nebraska                       ✓
-    → Winner: Nebraska 🎲 Gamble
+  Nebraska                      
+    -> Winner: Vanderbilt 👍 Lean [UPSET]
 
-  North Carolina                
-      vs
   Illinois                       ✓
-    → Winner: Illinois 👍 Lean
+      vs
+  VCU                           
+    -> Winner: Illinois 👍 Lean
 
-  Saint Mary's                  
+  Texas A&M                     
       vs
   Houston                        ✓
-    → Winner: Houston 👍 Lean
+    -> Winner: Houston 👍 Lean
 
   Michigan                       ✓
       vs
   Saint Louis                   
-    → Winner: Michigan 🔒 Lock
+    -> Winner: Michigan 🔒 Lock
 
-  Texas Tech                    
+  Texas Tech                     ✓
       vs
-  Alabama                        ✓
-    → Winner: Alabama 🎲 Gamble
+  Alabama                       
+    -> Winner: Texas Tech 🎲 Gamble [UPSET]
 
   SMU                           
       vs
   Virginia                       ✓
-    → Winner: Virginia 👍 Lean
+    -> Winner: Virginia 👍 Lean
 
   Iowa St.                       ✓
       vs
-  Kentucky                      
-    → Winner: Iowa St. 👍 Lean
+  Santa Clara                   
+    -> Winner: Iowa St. 🎲 Gamble
 
 
 ──────────────────────────────────────── SWEET 16 ────────────────────────────────────────
@@ -222,94 +222,94 @@
   Duke                           ✓
       vs
   Kansas                        
-    → Winner: Duke 🔒 Lock
+    -> Winner: Duke 🔒 Lock
 
-  UConn                          ✓
+  Michigan St.                   ✓
       vs
-  Michigan St.                  
-    → Winner: UConn 🎲 Gamble
+  UConn                         
+    -> Winner: Michigan St. 🎲 Gamble [UPSET]
 
   Arizona                        ✓
       vs
-  Arkansas                      
-    → Winner: Arizona 👍 Lean
+  Wisconsin                     
+    -> Winner: Arizona 👍 Lean
 
   Purdue                         ✓
       vs
-  Gonzaga                       
-    → Winner: Purdue 👍 Lean
+  NC State                      
+    -> Winner: Purdue 👍 Lean
 
-  Florida                        ✓
+  Florida                       
       vs
-  Nebraska                      
-    → Winner: Florida 👍 Lean
+  Vanderbilt                     ✓
+    -> Winner: Vanderbilt 🎲 Gamble [UPSET]
 
-  Illinois                      
+  Illinois                       ✓
       vs
-  Houston                        ✓
-    → Winner: Houston 🎲 Gamble
+  Houston                       
+    -> Winner: Illinois 🎲 Gamble [UPSET]
 
   Michigan                       ✓
       vs
-  Alabama                       
-    → Winner: Michigan 👍 Lean
+  Texas Tech                    
+    -> Winner: Michigan 👍 Lean
 
   Iowa St.                       ✓
       vs
   Virginia                      
-    → Winner: Iowa St. 🎲 Gamble
+    -> Winner: Iowa St. 👍 Lean
 
 
 ──────────────────────────────────────── ELITE 8 ────────────────────────────────────────
 
-  UConn                          ✓
+  Duke                           ✓
       vs
-  Duke                          
-    → Winner: UConn 🎲 Gamble [UPSET]
+  Michigan St.                  
+    -> Winner: Duke 🔒 Lock
 
   Purdue                         ✓
       vs
   Arizona                       
-    → Winner: Purdue 🎲 Gamble [UPSET]
+    -> Winner: Purdue 🎲 Gamble [UPSET]
 
-  Florida                        ✓
+  Illinois                       ✓
       vs
-  Houston                       
-    → Winner: Florida 🎲 Gamble
+  Vanderbilt                    
+    -> Winner: Illinois 👍 Lean
 
   Iowa St.                       ✓
       vs
   Michigan                      
-    → Winner: Iowa St. 🎲 Gamble [UPSET]
+    -> Winner: Iowa St. 🎲 Gamble [UPSET]
 
 
 ──────────────────────────────────────── FINAL FOUR ────────────────────────────────────────
 
   Purdue                         ✓
       vs
-  UConn                         
-    → Winner: Purdue 🔒 Lock
+  Duke                          
+    -> Winner: Purdue 🎲 Gamble [UPSET]
 
-  Iowa St.                       ✓
+  Iowa St.                      
       vs
-  Florida                       
-    → Winner: Iowa St. 👍 Lean [UPSET]
+  Illinois                       ✓
+    -> Winner: Illinois 👍 Lean [UPSET]
 
 
 ──────────────────────────────────────── CHAMPIONSHIP ────────────────────────────────────────
 
   Purdue                         ✓
       vs
-  Iowa St.                      
-    → Winner: Purdue 👍 Lean
+  Illinois                      
+    -> Winner: Purdue 👍 Lean
 
 
 ====================================================================================================
 CHAMPION: Purdue
-FINAL FOUR: Iowa St., Purdue, UConn, Florida
-ELITE EIGHT: Duke, UConn, Arizona, Purdue, Florida, Houston, Michigan, Iowa St.
+FINAL FOUR: Iowa St., Duke, Illinois, Purdue
+ELITE EIGHT: Duke, Michigan St., Arizona, Purdue, Vanderbilt, Illinois, Michigan, Iowa St.
 
-Expected Score: 765 points
-P(1st Place): 17.8%
-Expected Finish: 13.7
+Expected Score: 706 points
+P(1st Place): 18.0%
+Expected Finish: 13.4
 ====================================================================================================

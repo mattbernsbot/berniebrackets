@@ -45,14 +45,19 @@ The pipeline runs in three stages: **collect → analyze → bracket**.
 
 3. **Contrarian** (`src/contrarian.py`) — Builds ownership profiles from Yahoo pick data (or seed-based estimates). Calculates leverage = model probability / public ownership. Higher leverage = more contrarian value.
 
-4. **Optimizer** (`src/optimizer.py`) — The core engine. 7-step process:
-   - Evaluate champion candidates (pool-value = title_prob / ownership)
-   - Generate scenarios (chalk / contrarian / chaos narratives)
+4. **Optimizer** (`src/optimizer.py`) — The core engine. Returns all ~24 evaluated brackets:
+   - Evaluate top 8 champion candidates (pool-value = title_prob / ownership)
+   - Generate ~24 scenarios (each champion at appropriate chaos levels + FF variants)
    - Build bracket top-down: champion → FF paths → EMV upsets → fill chalk
    - Monte Carlo simulate each bracket against opponent pools sampled from Yahoo ownership
-   - Select bracket with highest P(1st place)
+   - Tag top 3 diverse brackets (optimal, safe, aggressive) but return all ~24
 
-5. **Analyst** (`src/analyst.py`) — Generates output: `analysis.md`, `bracket.txt`, `summary.json` into `results/<timestamp>/`.
+5. **Analyst** (`src/analyst.py`) — Generates 5 output files into `results/<timestamp>/`:
+   - `analysis.md` — Comprehensive report with cross-bracket stats (champion distribution, FF frequency, upset consensus, all-brackets comparison table, model vs public)
+   - `bracket.txt` — ASCII bracket visualization (optimal only)
+   - `summary.json` — Machine-readable summary with aggregate stats
+   - `all_brackets.json` — Every evaluated bracket with full picks and stats
+   - `bracket.html` — Interactive bracket viewer with dropdown to browse all ~24 brackets
 
 ### Upset Model (`upset_model/`)
 
@@ -82,7 +87,7 @@ All dataclasses have `to_dict()`/`from_dict()` for JSON serialization. Key types
 
 ## Data Flow
 
-Intermediate data goes to `data/` (gitignored). Final output goes to `results/<timestamp>/`. The `full` command clears stale `data/*.json` between runs but preserves `real_bracket_2026.json` and raw HTML files.
+`data/` is for inputs only — cached scraped data and the trained model (gitignored). All optimizer output goes to `results/<timestamp>/`. The `full` command clears stale `data/*.json` between runs but preserves `real_bracket_2026.json` and raw HTML files. In the `full` pipeline, brackets flow in-memory from analyze → bracket stage; `data/all_brackets.json` is only written as a convenience cache for the standalone `analyze` + `bracket` two-step workflow.
 
 ## Dependencies
 

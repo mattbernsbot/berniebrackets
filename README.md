@@ -47,11 +47,11 @@ All scraped data is cached to `data/` so re-runs don't re-scrape unless forced.
 
 - **Sharp** -- Builds a pairwise win probability matrix for all 68 teams using the trained upset model (see `upset_model/README.md`). Falls back to seed-based historical rates if the model isn't available.
 - **Contrarian** -- Computes leverage scores: `model_probability / public_ownership`. A leverage > 1 means the public is undervaluing a team.
-- **Optimizer** -- Constructs brackets top-down (champion first, then Final Four paths, then EMV-positive upsets, then chalk). Evaluates each bracket via Monte Carlo simulation against a pool of opponents sampled from Yahoo ownership data. Selects the bracket that maximizes P(1st place).
+- **Optimizer** -- Generates ~24 scenario-based brackets across the top 8 champion candidates at varying chaos levels. Evaluates each via Monte Carlo simulation against a pool of opponents sampled from Yahoo ownership data. Returns all brackets ranked by P(1st place).
 
 **3. Bracket** (`python main.py bracket`)
 
-Generates human-readable output: `analysis.md`, `bracket.txt`, `summary.json`.
+Generates output: `analysis.md` (comprehensive cross-bracket report), `bracket.txt` (ASCII), `summary.json`, `all_brackets.json` (all ~24 brackets), and `bracket.html` (interactive viewer).
 
 ### Key Concepts
 
@@ -133,7 +133,7 @@ berniebrackets/
     parse_bracket_html.py   # Parse saved NCAA bracket HTML
     fetch_kenpom_2026.py    # Fetch current-year KenPom data
 
-  data/                   # Intermediate data (gitignored, auto-populated)
+  data/                   # Input data only (gitignored, cached scraped data + model)
   results/                # Output per run (results/<timestamp>/)
 ```
 
@@ -149,12 +149,14 @@ yahoo ---------> public_picks.json       matchup_probabilities.json
                                                       |
                                           ownership.json (leverage scores)
                                                       |
-                                          optimal_brackets.json
+                                          [~24 brackets evaluated in memory]
                                                       |
                                           results/<timestamp>/
-                                            analysis.md
-                                            bracket.txt
-                                            summary.json
+                                            analysis.md        (cross-bracket report)
+                                            bracket.txt        (ASCII, optimal only)
+                                            summary.json       (aggregate stats)
+                                            all_brackets.json  (all ~24 brackets)
+                                            bracket.html       (interactive viewer)
 ```
 
 ## Dependencies

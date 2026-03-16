@@ -1660,9 +1660,12 @@ def optimize_bracket(teams: list[Team],
             bracket, pool_size, scoring, sim_count, base_seed
         )
     
-    # COMPONENT 7: Select 3 diverse output brackets
-    result_brackets = select_diverse_output_brackets(brackets)
-    
-    logger.info(f"Pipeline complete. Returning {len(result_brackets)} optimized brackets.")
-    
-    return result_brackets
+    # Sort all brackets by P(1st) descending
+    brackets.sort(key=lambda b: b.p_first_place, reverse=True)
+
+    # COMPONENT 7: Tag top 3 diverse brackets (optimal, safe_alternate, aggressive_alternate)
+    select_diverse_output_brackets(brackets)  # mutates .label in-place on the top 3
+
+    logger.info(f"Pipeline complete. Returning all {len(brackets)} evaluated brackets.")
+
+    return brackets

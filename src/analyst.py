@@ -1,9 +1,12 @@
 """Output generation module - creates human-readable bracket analysis.
 
-Generates markdown reports and ASCII bracket visualizations.
+Generates markdown reports, ASCII bracket visualizations, JSON summaries,
+and an interactive HTML bracket viewer.
 """
 
+import json
 import logging
+from collections import Counter
 
 from src.models import CompleteBracket, Team, OwnershipProfile, AggregateResults, BracketStructure
 from src.utils import save_json, ensure_dir
@@ -13,16 +16,10 @@ logger = logging.getLogger("bracket_optimizer")
 
 def assign_confidence_tier(win_prob: float) -> str:
     """Assign a confidence tier emoji to a pick.
-    
-    🔒 Lock: win_prob ≥ 0.75 (heavy favorite)
-    👍 Lean: 0.55 ≤ win_prob < 0.75 (model-favored)
+
+    🔒 Lock: win_prob >= 0.75 (heavy favorite)
+    👍 Lean: 0.55 <= win_prob < 0.75 (model-favored)
     🎲 Gamble: win_prob < 0.55 (upset pick)
-    
-    Args:
-        win_prob: Win probability for the picked team.
-    
-    Returns:
-        One of "🔒 Lock", "👍 Lean", "🎲 Gamble".
     """
     if win_prob >= 0.75:
         return "🔒 Lock"
@@ -33,20 +30,9 @@ def assign_confidence_tier(win_prob: float) -> str:
 
 
 def explain_pick(team_name: str, opponent_name: str, team: Team, leverage: float, ownership: float) -> str:
-    """Generate a human-readable explanation for a pick.
-    
-    Args:
-        team_name: Name of picked team.
-        opponent_name: Name of opponent.
-        team: Full team data for the picked team.
-        leverage: Leverage score for this pick.
-        ownership: Public ownership percentage.
-    
-    Returns:
-        Markdown-formatted explanation paragraph.
-    """
+    """Generate a human-readable explanation for a pick."""
     explanation = f"**{team_name}** over {opponent_name}"
-    
+
     if leverage > 1.5:
         explanation += f" — High value pick (Leverage: {leverage:.2f}x). "
         explanation += f"Public ownership: {ownership*100:.1f}%, "
@@ -56,242 +42,376 @@ def explain_pick(team_name: str, opponent_name: str, team: Team, leverage: float
         explanation += f"{team.seed}-seed with solid efficiency (AdjEM: {team.adj_em:+.1f})."
     else:
         explanation += f" — Chalk pick. {team.seed}-seed favorite."
-    
+
     return explanation
 
 
-def generate_analysis_report(bracket: CompleteBracket, teams: list[Team], ownership_profiles: list[OwnershipProfile], matchup_matrix: dict[str, dict[str, float]]) -> str:
-    """Generate the full markdown analysis report.
-    
-    Sections:
-    - Executive Summary
-    - Key Differentiators
-    - Round-by-Round Breakdown
-    - Risk Assessment
-    
-    Args:
-        bracket: The optimal bracket.
-        teams: All team data.
-        ownership_profiles: Ownership/leverage data.
-        matchup_matrix: For win probabilities.
-    
-    Returns:
-        Complete markdown report as string.
+# ============================================================================
+# CROSS-BRACKET STATISTICS
+# ============================================================================
+
+def compute_cross_bracket_stats(brackets: list[CompleteBracket]) -> dict:
+    """Compute aggregate statistics across all brackets.
+
+    Returns dict with:
+        champion_dist: list of (team, count) sorted by count desc
+        ff_freq: list of (team, count) sorted by count desc
+        e8_freq: list of (team, count) sorted by count desc
+        consensus_picks: list of (slot_id, round_num, team, pct) for picks in >90% of brackets
+        upset_consensus: list of (team, round_num, count, pct) for upsets in >50% of brackets
+        pick_by_slot: dict[slot_id -> Counter of team picks]
     """
+    n = len(brackets)
+    if n == 0:
+        return {}
+
+    # Champion distribution
+    champ_counts = Counter(b.champion for b in brackets)
+    champion_dist = champ_counts.most_common()
+
+    # Final Four frequency
+    ff_counts = Counter()
+    for b in brackets:
+        for team in b.final_four:
+            ff_counts[team] += 1
+    ff_freq = ff_counts.most_common()
+
+    # Elite Eight frequency
+    e8_counts = Counter()
+    for b in brackets:
+        for team in b.elite_eight:
+            e8_counts[team] += 1
+    e8_freq = e8_counts.most_common()
+
+    # Per-slot pick distribution
+    pick_by_slot = {}
+    for b in brackets:
+        for pick in b.picks:
+            if pick.slot_id not in pick_by_slot:
+                pick_by_slot[pick.slot_id] = {"counter": Counter(), "round_num": pick.round_num}
+            pick_by_slot[pick.slot_id]["counter"][pick.winner] += 1
+
+    # Consensus picks (>90% agreement)
+    consensus_picks = []
+    for slot_id, info in pick_by_slot.items():
+        top_team, top_count = info["counter"].most_common(1)[0]
+        pct = top_count / n
+        if pct >= 0.9:
+            consensus_picks.append((slot_id, info["round_num"], top_team, pct))
+    consensus_picks.sort(key=lambda x: (-x[1], -x[3]))  # later rounds first, then by pct
+
+    # Upset consensus (upsets in >50% of brackets)
+    upset_counts = Counter()  # (team, round_num) -> count
+    for b in brackets:
+        for pick in b.picks:
+            if pick.is_upset:
+                upset_counts[(pick.winner, pick.round_num)] += 1
+    upset_consensus = []
+    for (team, round_num), count in upset_counts.items():
+        pct = count / n
+        if pct >= 0.5:
+            upset_consensus.append((team, round_num, count, pct))
+    upset_consensus.sort(key=lambda x: (-x[1], -x[3]))  # later rounds first
+
+    return {
+        "champion_dist": champion_dist,
+        "ff_freq": ff_freq,
+        "e8_freq": e8_freq,
+        "consensus_picks": consensus_picks,
+        "upset_consensus": upset_consensus,
+        "pick_by_slot": pick_by_slot,
+        "n": n,
+    }
+
+
+# ============================================================================
+# ANALYSIS REPORT (MARKDOWN)
+# ============================================================================
+
+def generate_analysis_report(all_brackets: list[CompleteBracket], teams: list[Team],
+                             ownership_profiles: list[OwnershipProfile],
+                             matchup_matrix: dict[str, dict[str, float]]) -> str:
+    """Generate a comprehensive markdown analysis report using all evaluated brackets."""
     lines = []
-    
-    # Header
-    lines.append("# 🏀 March Madness Bracket Optimizer — Analysis Report")
-    lines.append("")
-    
-    # Executive Summary
-    lines.append("## Executive Summary")
-    lines.append("")
-    lines.append(f"**Champion:** {bracket.champion}")
-    lines.append(f"**Final Four:** {', '.join(bracket.final_four)}")
-    lines.append(f"**Elite Eight:** {', '.join(bracket.elite_eight)}")
-    lines.append("")
-    lines.append(f"**P(1st place):** {bracket.p_first_place:.1%}")
-    lines.append(f"**P(Top 3):** {bracket.p_top_three:.1%}")
-    lines.append(f"**Expected finish:** {bracket.expected_finish:.1f}")
-    lines.append(f"**Expected score:** {bracket.expected_score:.0f} points")
-    lines.append("")
-    
-    # Strategy label
-    lines.append(f"**Strategy:** {bracket.label}")
-    lines.append("")
-    
-    # Build team lookup
     team_map = {t.name: t for t in teams}
     ownership_map = {p.team: p for p in ownership_profiles}
-    
-    # Key Differentiators
-    lines.append("## Key Differentiators")
+    n = len(all_brackets)
+
+    optimal = next((b for b in all_brackets if b.label == "optimal"), all_brackets[0])
+    stats = compute_cross_bracket_stats(all_brackets)
+
+    round_labels = {1: "R64", 2: "R32", 3: "S16", 4: "E8", 5: "F4", 6: "CHAMP"}
+
+    # ── Header ──
+    lines.append("# March Madness Bracket Optimizer -- Analysis Report")
     lines.append("")
-    lines.append("These picks separate your bracket from the field:")
+
+    # ── Executive Summary ──
+    lines.append("## Executive Summary")
     lines.append("")
-    
-    # BUG FIX #3: Pool-aware leverage produces values like 0.04-0.10, not 1.5+
-    # Adjusted threshold from 1.5 to 0.02 to match actual scale
-    # Alternative: use top N picks regardless of threshold
-    high_leverage_picks = [p for p in bracket.picks if p.leverage_score > 0.02]
+    lines.append(f"**Champion:** {optimal.champion}")
+    lines.append(f"**Final Four:** {', '.join(optimal.final_four)}")
+    lines.append(f"**Elite Eight:** {', '.join(optimal.elite_eight)}")
+    lines.append("")
+    lines.append(f"| Metric | Value |")
+    lines.append(f"|--------|-------|")
+    lines.append(f"| P(1st place) | {optimal.p_first_place:.1%} |")
+    lines.append(f"| P(Top 3) | {optimal.p_top_three:.1%} |")
+    lines.append(f"| Expected finish | {optimal.expected_finish:.1f} |")
+    lines.append(f"| Expected score | {optimal.expected_score:.0f} pts |")
+    lines.append(f"| Brackets evaluated | {n} |")
+    lines.append(f"| Strategy | {optimal.label} |")
+    lines.append("")
+
+    # ── Cross-Bracket Analysis ──
+    lines.append("## Cross-Bracket Analysis")
+    lines.append("")
+    lines.append(f"Aggregate view across all {n} evaluated brackets.")
+    lines.append("")
+
+    # Champion distribution
+    lines.append("### Champion Distribution")
+    lines.append("")
+    lines.append("| Team | Seed | Count | % of Brackets |")
+    lines.append("|------|------|-------|---------------|")
+    for team_name, count in stats["champion_dist"]:
+        team = team_map.get(team_name)
+        seed = team.seed if team else "?"
+        lines.append(f"| {team_name} | {seed} | {count}/{n} | {count/n:.0%} |")
+    lines.append("")
+
+    # Final Four frequency
+    lines.append("### Final Four Frequency")
+    lines.append("")
+    lines.append("| Team | Seed | Appearances | % |")
+    lines.append("|------|------|-------------|---|")
+    for team_name, count in stats["ff_freq"][:12]:
+        team = team_map.get(team_name)
+        seed = team.seed if team else "?"
+        lines.append(f"| {team_name} | {seed} | {count}/{n} | {count/n:.0%} |")
+    lines.append("")
+
+    # Consensus upsets
+    if stats["upset_consensus"]:
+        lines.append("### Consensus Upsets")
+        lines.append("")
+        lines.append("Upsets the model picks in >50% of brackets -- these are real.")
+        lines.append("")
+        lines.append("| Team | Round | Frequency | % |")
+        lines.append("|------|-------|-----------|---|")
+        for team_name, round_num, count, pct in stats["upset_consensus"]:
+            team = team_map.get(team_name)
+            seed_str = f" ({team.seed})" if team else ""
+            lines.append(f"| {team_name}{seed_str} | {round_labels.get(round_num, f'R{round_num}')} | {count}/{n} | {pct:.0%} |")
+        lines.append("")
+
+    # ── All Brackets Comparison ──
+    lines.append("## All Brackets")
+    lines.append("")
+    lines.append("| # | Label | Champion | P(1st) | P(Top 3) | E[Score] | E[Finish] | Upsets |")
+    lines.append("|---|-------|----------|--------|----------|----------|-----------|--------|")
+    for i, b in enumerate(all_brackets, 1):
+        upset_count = sum(1 for p in b.picks if p.is_upset)
+        tag = ""
+        if b.label in ("optimal", "safe_alternate", "aggressive_alternate"):
+            tag = f" **[{b.label.upper()}]**"
+        lines.append(
+            f"| {i} | {b.label}{tag} | {b.champion} | {b.p_first_place:.1%} "
+            f"| {b.p_top_three:.1%} | {b.expected_score:.0f} | {b.expected_finish:.1f} "
+            f"| {upset_count} |"
+        )
+    lines.append("")
+
+    # ── Model vs Public ──
+    lines.append("## Model vs Public Ownership")
+    lines.append("")
+    lines.append("Top teams by model title probability vs public championship ownership.")
+    lines.append("")
+    lines.append("| Team | Seed | Model Title % | Public Title % | Leverage |")
+    lines.append("|------|------|---------------|----------------|----------|")
+
+    # Collect teams that appear as champion in any bracket, sorted by frequency
+    champ_teams = [team_name for team_name, _ in stats["champion_dist"]]
+    # Also add any team with high title ownership
+    for profile in sorted(ownership_profiles, key=lambda p: p.title_ownership, reverse=True)[:10]:
+        if profile.team not in champ_teams:
+            champ_teams.append(profile.team)
+
+    for team_name in champ_teams[:12]:
+        team = team_map.get(team_name)
+        profile = ownership_map.get(team_name)
+        if not team or not profile:
+            continue
+        # Approximate model title prob from champion distribution
+        champ_count = dict(stats["champion_dist"]).get(team_name, 0)
+        model_pct = champ_count / n if n > 0 else 0
+        pub_pct = profile.title_ownership
+        leverage = profile.title_leverage if profile.title_leverage else (model_pct / pub_pct if pub_pct > 0 else 0)
+        lines.append(f"| {team_name} | {team.seed} | {model_pct:.1%} | {pub_pct:.1%} | {leverage:.2f} |")
+    lines.append("")
+
+    # ── Key Differentiators (optimal bracket) ──
+    lines.append("## Key Differentiators (Optimal Bracket)")
+    lines.append("")
+    lines.append("High-leverage picks that separate the optimal bracket from the field:")
+    lines.append("")
+
+    high_leverage_picks = [p for p in optimal.picks if p.leverage_score > 0.02]
     high_leverage_picks.sort(key=lambda x: x.leverage_score, reverse=True)
-    
-    # Show top 8-12 differentiators if we have them
     display_count = min(12, len(high_leverage_picks))
-    
+
     for idx, pick in enumerate(high_leverage_picks[:display_count], 1):
         team = team_map.get(pick.winner)
         ownership = ownership_map.get(pick.winner)
-        
         if team and ownership:
-            round_name = ["R64", "R32", "S16", "E8", "F4", "CHAMP"][pick.round_num - 1]
-            lines.append(f"{idx}. **{pick.winner}** to {round_name} "
-                        f"(Leverage: {pick.leverage_score:.4f}, "
-                        f"Seed: {team.seed}, "
-                        f"Ownership: {ownership.round_ownership.get(pick.round_num, 0)*100:.1f}%)")
-    
+            rnd = round_labels.get(pick.round_num, f"R{pick.round_num}")
+            own_pct = ownership.round_ownership.get(pick.round_num, 0) * 100
+            # How many of our brackets make this same pick at this slot?
+            slot_info = stats["pick_by_slot"].get(pick.slot_id, {})
+            slot_counter = slot_info.get("counter", Counter()) if isinstance(slot_info, dict) else Counter()
+            bracket_pct = slot_counter.get(pick.winner, 0) / n if n > 0 else 0
+            lines.append(
+                f"{idx}. **{pick.winner}** to {rnd} -- "
+                f"Leverage: {pick.leverage_score:.4f}, "
+                f"Seed: {team.seed}, "
+                f"Public: {own_pct:.1f}%, "
+                f"In {bracket_pct:.0%} of our brackets"
+            )
+
     if not high_leverage_picks:
-        lines.append("_(No high-leverage picks found — this is a chalk-heavy bracket)_")
-    
+        lines.append("_(No high-leverage picks found -- chalk-heavy bracket)_")
     lines.append("")
-    
-    # Round breakdown
-    lines.append("## Round-by-Round Breakdown")
+
+    # ── Round-by-Round Breakdown (optimal) ──
+    lines.append("## Round-by-Round Breakdown (Optimal)")
     lines.append("")
-    
+
     picks_by_round = {}
-    for pick in bracket.picks:
-        if pick.round_num not in picks_by_round:
-            picks_by_round[pick.round_num] = []
-        picks_by_round[pick.round_num].append(pick)
-    
-    round_names = {
-        1: "Round of 64",
-        2: "Round of 32",
-        3: "Sweet 16",
-        4: "Elite 8",
-        5: "Final Four",
-        6: "Championship"
-    }
-    
+    for pick in optimal.picks:
+        picks_by_round.setdefault(pick.round_num, []).append(pick)
+
+    round_names = {1: "Round of 64", 2: "Round of 32", 3: "Sweet 16",
+                   4: "Elite 8", 5: "Final Four", 6: "Championship"}
+
     for round_num in sorted(picks_by_round.keys()):
         if round_num == 0:
-            continue  # Skip play-in for now
-        
+            continue
+        round_picks = picks_by_round[round_num]
+        upsets = [p for p in round_picks if p.is_upset]
         lines.append(f"### {round_names.get(round_num, f'Round {round_num}')}")
         lines.append("")
-        
-        round_picks = picks_by_round[round_num]
-        
-        # Show upsets and key picks
-        upsets = [p for p in round_picks if p.is_upset]
         if upsets:
             lines.append(f"**Upsets:** {len(upsets)}")
             for pick in upsets:
                 team = team_map.get(pick.winner)
                 if team:
-                    lines.append(f"- {pick.winner} ({team.seed}-seed) — {pick.confidence}")
-        
+                    lines.append(f"- {pick.winner} ({team.seed}-seed) -- {pick.confidence}")
+        else:
+            lines.append("No upsets.")
         lines.append("")
-    
-    # Risk Assessment
+
+    # ── Risk Assessment ──
     lines.append("## Risk Assessment")
     lines.append("")
-    lines.append("**What needs to go right:**")
-    lines.append(f"- {bracket.champion} must reach the championship game")
-    lines.append(f"- At least 2-3 Final Four teams must advance as predicted")
+
+    # Champion dependency
+    champ_picks = [p for p in optimal.picks if p.winner == optimal.champion]
+    scoring = [10, 20, 40, 80, 160, 320]
+    champ_points = sum(scoring[p.round_num - 1] for p in champ_picks if 1 <= p.round_num <= 6)
+    total_points = optimal.expected_score if optimal.expected_score > 0 else 1
+    champ_dep = champ_points / total_points * 100
+
+    lines.append(f"**Champion dependency:** {optimal.champion} path accounts for "
+                 f"{champ_points} potential points ({champ_dep:.0f}% of expected score)")
     lines.append("")
-    lines.append("**Biggest vulnerabilities:**")
-    
-    # Find riskiest picks (lowest win prob)
-    risky_picks = [p for p in bracket.picks if p.confidence == "🎲 Gamble"]
-    if risky_picks:
-        lines.append(f"- {len(risky_picks)} gamble picks that could bust early")
-    
+
+    # Gamble picks by round
+    lines.append("**Gamble picks by round:**")
+    for round_num in sorted(picks_by_round.keys()):
+        if round_num == 0:
+            continue
+        gambles = [p for p in picks_by_round[round_num] if p.confidence == "\U0001f3b2 Gamble"]
+        total = len(picks_by_round[round_num])
+        if gambles:
+            lines.append(f"- {round_names.get(round_num, f'R{round_num}')}: {len(gambles)}/{total}")
     lines.append("")
-    
+
+    # Chalk overlap
+    chalk_picks = [p for p in optimal.picks if not p.is_upset and p.round_num > 0]
+    total_picks = [p for p in optimal.picks if p.round_num > 0]
+    chalk_pct = len(chalk_picks) / len(total_picks) * 100 if total_picks else 0
+    lines.append(f"**Chalk overlap:** {len(chalk_picks)}/{len(total_picks)} picks match chalk ({chalk_pct:.0f}%)")
+    lines.append("")
+
     return "\n".join(lines)
 
 
+# ============================================================================
+# ASCII BRACKET (unchanged -- optimal only, for terminal viewing)
+# ============================================================================
+
 def generate_ascii_bracket(bracket: CompleteBracket, bracket_structure: BracketStructure) -> str:
-    """Generate an ASCII-art bracket visualization.
-    
-    Renders a text-based bracket with team names, seeds, and round progression.
-    Shows matchup pairings and winners advancing through rounds.
-    
-    Args:
-        bracket: The bracket to render.
-        bracket_structure: For positional layout.
-    
-    Returns:
-        ASCII bracket as multi-line string.
-    """
+    """Generate an ASCII-art bracket visualization."""
     lines = []
-    
+
     lines.append("=" * 100)
     lines.append(" " * 35 + "MARCH MADNESS BRACKET")
     lines.append("=" * 100)
     lines.append("")
-    
-    # Build pick lookup and team lookup
+
     pick_map = {p.slot_id: p for p in bracket.picks}
     slot_map = {s.slot_id: s for s in bracket_structure.slots}
-    
-    # Group picks by round for easier navigation
+
     picks_by_round = {}
     for pick in bracket.picks:
-        if pick.round_num not in picks_by_round:
-            picks_by_round[pick.round_num] = []
-        picks_by_round[pick.round_num].append(pick)
-    
-    # Round names
-    round_names = {
-        1: "ROUND OF 64",
-        2: "ROUND OF 32", 
-        3: "SWEET 16",
-        4: "ELITE 8",
-        5: "FINAL FOUR",
-        6: "CHAMPIONSHIP"
-    }
-    
-    # Display by round showing matchups
+        picks_by_round.setdefault(pick.round_num, []).append(pick)
+
+    round_names = {1: "ROUND OF 64", 2: "ROUND OF 32", 3: "SWEET 16",
+                   4: "ELITE 8", 5: "FINAL FOUR", 6: "CHAMPIONSHIP"}
+
     for round_num in sorted([r for r in picks_by_round.keys() if r > 0]):
         lines.append("")
         lines.append(f"{'─' * 40} {round_names.get(round_num, f'ROUND {round_num}')} {'─' * 40}")
         lines.append("")
-        
+
         round_picks = picks_by_round[round_num]
-        
-        # For Round 1, show initial matchups
+
         if round_num == 1:
-            # Show who plays who
             for pick in sorted(round_picks, key=lambda p: p.slot_id):
                 slot = slot_map.get(pick.slot_id)
                 if slot and slot.team_a and slot.team_b:
                     winner_marker_a = " ✓" if pick.winner == slot.team_a else ""
                     winner_marker_b = " ✓" if pick.winner == slot.team_b else ""
-                    
                     seed_a = f"({slot.seed_a})" if slot.seed_a else ""
                     seed_b = f"({slot.seed_b})" if slot.seed_b else ""
-                    
                     upset = " [UPSET]" if pick.is_upset else ""
-                    
                     lines.append(f"  {slot.team_a:25s} {seed_a:4s}{winner_marker_a}")
                     lines.append(f"  {slot.team_b:25s} {seed_b:4s}{winner_marker_b}")
-                    lines.append(f"    → Winner: {pick.winner} {pick.confidence}{upset}")
+                    lines.append(f"    -> Winner: {pick.winner} {pick.confidence}{upset}")
                     lines.append("")
         else:
-            # For later rounds, show who advanced and who they play
             for pick in sorted(round_picks, key=lambda p: p.slot_id):
                 slot = slot_map.get(pick.slot_id)
                 if not slot:
                     continue
-                
-                # Find the teams feeding into this game
                 feeder_teams = []
                 for prev_slot_id, prev_pick in pick_map.items():
                     prev_slot = slot_map.get(prev_slot_id)
                     if prev_slot and prev_slot.feeds_into == slot.slot_id:
                         feeder_teams.append(prev_pick.winner)
-                
                 if len(feeder_teams) == 2:
                     winner_marker_a = " ✓" if pick.winner == feeder_teams[0] else ""
                     winner_marker_b = " ✓" if pick.winner == feeder_teams[1] else ""
-                    
                     upset = " [UPSET]" if pick.is_upset else ""
-                    
                     lines.append(f"  {feeder_teams[0]:30s}{winner_marker_a}")
                     lines.append(f"      vs")
                     lines.append(f"  {feeder_teams[1]:30s}{winner_marker_b}")
-                    lines.append(f"    → Winner: {pick.winner} {pick.confidence}{upset}")
+                    lines.append(f"    -> Winner: {pick.winner} {pick.confidence}{upset}")
                     lines.append("")
                 else:
-                    # Fallback if we can't determine matchup
                     lines.append(f"  Winner: {pick.winner} {pick.confidence}")
                     lines.append("")
-    
-    # Summary
+
     lines.append("")
     lines.append("=" * 100)
     lines.append(f"CHAMPION: {bracket.champion}")
@@ -302,58 +422,636 @@ def generate_ascii_bracket(bracket: CompleteBracket, bracket_structure: BracketS
     lines.append(f"P(1st Place): {bracket.p_first_place:.1%}")
     lines.append(f"Expected Finish: {bracket.expected_finish:.1f}")
     lines.append("=" * 100)
-    
+
     return "\n".join(lines)
 
 
-def generate_all_output(brackets: list[CompleteBracket], teams: list[Team], ownership_profiles: list[OwnershipProfile], matchup_matrix: dict[str, dict[str, float]], bracket_structure: BracketStructure, config) -> None:
-    """Run the full output pipeline.
-    
-    Generates and saves:
-    - output/analysis.md: Full analysis report
-    - output/bracket.txt: ASCII bracket visualization
-    - output/summary.json: Machine-readable summary
-    
-    Args:
-        brackets: Top 3 brackets [optimal, safe, aggressive].
-        teams: All team data.
-        ownership_profiles: Ownership data.
-        matchup_matrix: Win probability matrix.
-        bracket_structure: Bracket layout.
-        config: Configuration.
-    """
+# ============================================================================
+# SUMMARY JSON
+# ============================================================================
+
+def generate_summary_json(all_brackets: list[CompleteBracket]) -> dict:
+    """Build enhanced summary.json with aggregate stats."""
+    optimal = next((b for b in all_brackets if b.label == "optimal"), all_brackets[0])
+    safe = next((b for b in all_brackets if b.label == "safe_alternate"), None)
+    aggressive = next((b for b in all_brackets if b.label == "aggressive_alternate"), None)
+
+    stats = compute_cross_bracket_stats(all_brackets)
+    n = len(all_brackets)
+
+    return {
+        "optimal_bracket": optimal.to_dict(),
+        "safe_alternate": safe.to_dict() if safe else None,
+        "aggressive_alternate": aggressive.to_dict() if aggressive else None,
+        "champion": optimal.champion,
+        "final_four": optimal.final_four,
+        "p_first_place": optimal.p_first_place,
+        "expected_score": optimal.expected_score,
+        "total_brackets_evaluated": n,
+        "champion_distribution": {team: count for team, count in stats.get("champion_dist", [])},
+        "final_four_frequency": {team: count for team, count in stats.get("ff_freq", [])},
+        "aggregate_stats": {
+            "mean_p_first": sum(b.p_first_place for b in all_brackets) / n if n else 0,
+            "max_p_first": max((b.p_first_place for b in all_brackets), default=0),
+            "mean_expected_score": sum(b.expected_score for b in all_brackets) / n if n else 0,
+        },
+    }
+
+
+# ============================================================================
+# HTML BRACKET VIEWER
+# ============================================================================
+
+def generate_bracket_html(brackets: list[CompleteBracket],
+                          bracket_structure: BracketStructure,
+                          teams: list[Team],
+                          ownership_profiles: list[OwnershipProfile]) -> str:
+    """Generate a self-contained interactive HTML bracket viewer."""
+
+    # Prepare data for embedding
+    bracket_data = []
+    for b in brackets:
+        upset_count = sum(1 for p in b.picks if p.is_upset)
+        bracket_data.append({
+            "label": b.label,
+            "champion": b.champion,
+            "final_four": b.final_four,
+            "elite_eight": b.elite_eight,
+            "p_first_place": round(b.p_first_place, 4),
+            "p_top_three": round(b.p_top_three, 4),
+            "expected_score": round(b.expected_score, 1),
+            "expected_finish": round(b.expected_finish, 1),
+            "upset_count": upset_count,
+            "picks": {str(p.slot_id): {
+                "winner": p.winner,
+                "confidence": p.confidence,
+                "is_upset": p.is_upset,
+                "round_num": p.round_num,
+                "leverage": round(p.leverage_score, 4),
+            } for p in b.picks}
+        })
+
+    structure_data = [s.to_dict() for s in bracket_structure.slots]
+
+    team_data = {t.name: {
+        "seed": t.seed,
+        "region": t.region,
+        "kenpom_rank": t.kenpom_rank,
+        "adj_em": round(t.adj_em, 1),
+        "adj_o": round(t.adj_o, 1),
+        "adj_d": round(t.adj_d, 1),
+        "record": f"{t.wins}-{t.losses}",
+        "conference": t.conference or "",
+        "barthag": round(t.barthag, 3) if t.barthag else None,
+        "wab": round(t.wab, 1) if t.wab else None,
+        "top25_wins": getattr(t, 'top25_wins', None),
+        "top25_losses": getattr(t, 'top25_losses', None),
+    } for t in teams}
+
+    ownership_data = {p.team: {
+        "round_ownership": {str(k): round(v, 4) for k, v in p.round_ownership.items()},
+        "leverage_by_round": {str(k): round(v, 4) for k, v in p.leverage_by_round.items()},
+        "title_ownership": round(p.title_ownership, 4),
+        "title_leverage": round(p.title_leverage, 2),
+    } for p in ownership_profiles}
+
+    html = _HTML_TEMPLATE
+    html = html.replace("__BRACKET_DATA__", json.dumps(bracket_data))
+    html = html.replace("__STRUCTURE_DATA__", json.dumps(structure_data))
+    html = html.replace("__TEAM_DATA__", json.dumps(team_data))
+    html = html.replace("__OWNERSHIP_DATA__", json.dumps(ownership_data))
+
+    return html
+
+
+_HTML_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BernieBrackets - Bracket Viewer</title>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --card: #fff;
+  --border: #dee2e6;
+  --text: #212529;
+  --muted: #6c757d;
+  --accent: #0d6efd;
+  --upset: #fd7e14;
+  --gold: #ffc107;
+  --winner-bg: #d4edda;
+  --loser: #adb5bd;
+  --panel-bg: #1a1a2e;
+  --panel-text: #e0e0e0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+/* Header */
+.header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.header h1 { font-size: 20px; font-weight: 700; white-space: nowrap; }
+.header select { padding: 6px 10px; border-radius: 6px; border: 1px solid #444; background: #16213e; color: #fff; font-size: 13px; min-width: 350px; cursor: pointer; }
+.header select:focus { outline: 2px solid var(--accent); }
+.header-spacer { flex: 1; }
+.glossary-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #555; background: transparent; color: #ccc; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; }
+.glossary-btn:hover { background: #16213e; color: #fff; border-color: var(--accent); }
+
+/* Stats bar */
+.stats-bar { background: #16213e; color: #e0e0e0; padding: 10px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; }
+.stat { display: flex; flex-direction: column; }
+.stat-label { color: #8899aa; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-weight: 700; font-size: 15px; color: #fff; }
+.stat-value.highlight { color: var(--gold); }
+
+/* Bracket container */
+.bracket-wrap { display: flex; justify-content: center; overflow-x: auto; padding: 20px 10px; }
+.bracket-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: start; min-width: 1200px; }
+
+/* Side (left or right) */
+.bracket-side { display: flex; flex-direction: column; gap: 24px; }
+.bracket-side.right .region { direction: rtl; }
+.bracket-side.right .region > * { direction: ltr; }
+
+/* Region */
+.region { padding: 8px 0; }
+.region-label { font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 0 8px 6px; }
+.bracket-side.right .region-label { text-align: right; }
+.rounds { display: flex; align-items: stretch; }
+.bracket-side.right .rounds { flex-direction: row-reverse; }
+
+/* Round column */
+.round-col { display: flex; flex-direction: column; justify-content: space-around; min-width: 140px; padding: 0 2px; }
+
+/* Game cell */
+.game { margin: 2px 0; border: 1px solid var(--border); border-radius: 4px; background: var(--card); overflow: hidden; font-size: 11px; min-width: 130px; cursor: pointer; transition: box-shadow 0.15s; }
+.game:hover { box-shadow: 0 0 0 2px var(--accent); }
+.game.upset { border-left: 3px solid var(--upset); }
+.game-team { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px solid #eee; gap: 4px; white-space: nowrap; }
+.game-team:last-child { border-bottom: none; }
+.game-team.winner { background: var(--winner-bg); font-weight: 600; }
+.game-team.loser { color: var(--loser); }
+.game-team .seed { color: var(--muted); font-size: 10px; min-width: 18px; }
+.game-team .name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.game-team .conf { font-size: 10px; }
+.game.champ-path { box-shadow: 0 0 0 2px var(--gold); }
+.game.champ-path:hover { box-shadow: 0 0 0 2px var(--accent); }
+
+/* Center (Final Four + Championship) */
+.bracket-center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 12px; gap: 10px; min-width: 180px; }
+.ff-label { font-weight: 700; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.championship-label { font-weight: 700; font-size: 14px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+.center-game { min-width: 160px; }
+.champion-box { text-align: center; padding: 10px; background: linear-gradient(135deg, #ffc107, #ff9800); color: #1a1a2e; border-radius: 8px; font-weight: 700; font-size: 16px; margin-top: 4px; }
+.champion-box .champ-seed { font-size: 11px; font-weight: 400; opacity: 0.8; }
+
+/* Detail Panel (right sidebar) */
+.detail-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; }
+.detail-overlay.open { display: block; }
+.detail-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); }
+.detail-panel { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: var(--panel-bg); color: var(--panel-text); overflow-y: auto; box-shadow: -4px 0 20px rgba(0,0,0,0.3); padding: 0; }
+.detail-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #2a2a4e; }
+.detail-header h2 { font-size: 15px; color: #fff; }
+.detail-close { background: none; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 0 4px; }
+.detail-close:hover { color: #fff; }
+.detail-body { padding: 16px 20px; }
+
+/* Team card inside detail panel */
+.team-card { background: #16213e; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.team-card.winner-card { border: 1px solid #4caf50; }
+.team-card.loser-card { border: 1px solid #444; opacity: 0.75; }
+.tc-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.tc-meta { font-size: 11px; color: #8899aa; margin-bottom: 10px; }
+.tc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tc-stat { display: flex; flex-direction: column; }
+.tc-stat-label { font-size: 9px; color: #667; text-transform: uppercase; letter-spacing: 0.5px; }
+.tc-stat-value { font-size: 13px; font-weight: 600; color: #ccc; }
+.tc-stat-value.good { color: #4caf50; }
+.tc-stat-value.warn { color: var(--upset); }
+
+/* Pick summary in detail panel */
+.pick-summary { background: #16213e; border-radius: 8px; padding: 14px; margin-top: 4px; }
+.pick-summary h3 { font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.ps-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+.ps-row .ps-label { color: #8899aa; }
+.ps-row .ps-value { color: #fff; font-weight: 600; }
+
+/* Glossary Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; }
+.modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+.modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+.modal-content { position: relative; background: #1a1a2e; color: var(--panel-text); border-radius: 12px; padding: 28px 32px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.modal-content h2 { font-size: 18px; color: #fff; margin-bottom: 16px; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; color: #888; font-size: 22px; cursor: pointer; }
+.modal-close:hover { color: #fff; }
+.gloss-item { margin-bottom: 12px; }
+.gloss-term { font-weight: 700; color: var(--gold); font-size: 13px; }
+.gloss-def { font-size: 12px; color: #bbb; line-height: 1.5; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BernieBrackets</h1>
+  <select id="bracket-selector"></select>
+  <div class="header-spacer"></div>
+  <button class="glossary-btn" onclick="document.getElementById('glossary-modal').classList.add('open')">Glossary</button>
+</div>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div class="bracket-wrap">
+  <div class="bracket-container" id="bracket-container">
+    <div class="bracket-side left" id="side-left"></div>
+    <div class="bracket-center" id="center"></div>
+    <div class="bracket-side right" id="side-right"></div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-backdrop" onclick="closeDetail()"></div>
+  <div class="detail-panel">
+    <div class="detail-header">
+      <h2 id="detail-title">Matchup Detail</h2>
+      <button class="detail-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- Glossary Modal -->
+<div class="modal-overlay" id="glossary-modal">
+  <div class="modal-backdrop" onclick="document.getElementById('glossary-modal').classList.remove('open')"></div>
+  <div class="modal-content">
+    <button class="modal-close" onclick="document.getElementById('glossary-modal').classList.remove('open')">&times;</button>
+    <h2>Glossary</h2>
+    <div class="gloss-item"><span class="gloss-term">AdjEM</span><div class="gloss-def">Adjusted Efficiency Margin. Points scored minus points allowed per 100 possessions, adjusted for opponent strength. The single best predictor of tournament success.</div></div>
+    <div class="gloss-item"><span class="gloss-term">AdjO / AdjD</span><div class="gloss-def">Adjusted Offensive / Defensive Efficiency. Points scored (or allowed) per 100 possessions, adjusted for opponent strength. Lower AdjD is better.</div></div>
+    <div class="gloss-item"><span class="gloss-term">KenPom Rank</span><div class="gloss-def">Overall team ranking from kenpom.com, based on AdjEM. #1 is the best team in the country.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Barthag</span><div class="gloss-def">From Barttorvik. Estimated probability of beating an average Division I team on a neutral court. 0.95+ is elite.</div></div>
+    <div class="gloss-item"><span class="gloss-term">WAB</span><div class="gloss-def">Wins Above Bubble. How many wins above (or below) what a bubble team would achieve against the same schedule. Positive = comfortably in the tournament.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Top-25 Record</span><div class="gloss-def">Wins and losses against top-25 ranked opponents. Reveals how a team performs against elite competition.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Leverage</span><div class="gloss-def">Model probability / public ownership. Values &gt;1 mean the public is undervaluing this pick. Higher leverage = more contrarian value if the pick hits.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Public %</span><div class="gloss-def">Percentage of Yahoo Bracket Mayhem entrants picking this team to advance to this round. Represents what "the field" is doing.</div></div>
+    <div class="gloss-item"><span class="gloss-term">P(1st)</span><div class="gloss-def">Probability this bracket finishes 1st in the pool, estimated via Monte Carlo simulation of thousands of random tournaments against opponent brackets sampled from public ownership.</div></div>
+    <div class="gloss-item"><span class="gloss-term">E[Score]</span><div class="gloss-def">Expected ESPN bracket score using standard scoring: 10, 20, 40, 80, 160, 320 points per round. The championship pick alone is worth 320 points.</div></div>
+    <div class="gloss-item"><span class="gloss-term">EMV</span><div class="gloss-def">Expected Marginal Value. P(upset) &times; ownership_gain &minus; P(chalk) &times; ownership_cost. Positive EMV means picking the upset increases your expected pool finish.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Confidence Tiers</span><div class="gloss-def">&#x1f512; Lock: &ge;75% win probability. &#x1f44d; Lean: 55-75%. &#x1f3b2; Gamble: &lt;55%.</div></div>
+  </div>
+</div>
+
+<script>
+const BRACKETS = __BRACKET_DATA__;
+const SLOTS = __STRUCTURE_DATA__;
+const TEAMS = __TEAM_DATA__;
+const OWNERSHIP = __OWNERSHIP_DATA__;
+
+let currentPicks = null; // track current bracket's picks for detail panel
+
+const ROUND_NAMES = {1:'R64',2:'R32',3:'S16',4:'E8',5:'Final Four',6:'Championship'};
+
+// Build slot lookup
+const slotById = {};
+SLOTS.forEach(s => slotById[s.slot_id] = s);
+
+function feedersOf(slotId) {
+  return SLOTS.filter(s => s.feeds_into === slotId).sort((a,b) => a.slot_id - b.slot_id);
+}
+
+function detectLayout() {
+  const ffSlots = SLOTS.filter(s => s.round_num === 5).sort((a,b) => a.slot_id - b.slot_id);
+  const layout = { left: [], right: [] };
+  ffSlots.forEach((ff, i) => {
+    const e8Feeders = feedersOf(ff.slot_id);
+    const regions = e8Feeders.map(e => e.region).filter(r => r && r !== 'FinalFour');
+    if (i === 0) layout.left = regions;
+    else layout.right = regions;
+  });
+  if (layout.left.length === 0) {
+    const allRegions = [...new Set(SLOTS.filter(s => s.region && s.region !== 'FinalFour').map(s => s.region))];
+    layout.left = allRegions.slice(0, 2);
+    layout.right = allRegions.slice(2, 4);
+  }
+  return layout;
+}
+
+function populateSelector() {
+  const sel = document.getElementById('bracket-selector');
+  BRACKETS.forEach((b, i) => {
+    const opt = document.createElement('option');
+    const tag = ['optimal','safe_alternate','aggressive_alternate'].includes(b.label) ? ` [${b.label.toUpperCase()}]` : '';
+    opt.value = i;
+    opt.textContent = `${i+1}. ${b.label}${tag} -- ${b.champion} -- P(1st): ${(b.p_first_place*100).toFixed(1)}%`;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => { closeDetail(); renderBracket(parseInt(sel.value)); });
+}
+
+function updateStats(b) {
+  const bar = document.getElementById('stats-bar');
+  const stats = [
+    ['Champion', b.champion, true],
+    ['P(1st)', (b.p_first_place*100).toFixed(1) + '%', true],
+    ['P(Top 3)', (b.p_top_three*100).toFixed(1) + '%', false],
+    ['E[Score]', Math.round(b.expected_score) + ' pts', false],
+    ['E[Finish]', b.expected_finish.toFixed(1), false],
+    ['Upsets', b.upset_count, false],
+    ['Final Four', b.final_four.join(', '), false],
+  ];
+  bar.innerHTML = stats.map(([label, val, hl]) =>
+    `<div class="stat"><span class="stat-label">${label}</span><span class="stat-value${hl?' highlight':''}">${val}</span></div>`
+  ).join('');
+}
+
+// ── Detail Panel ──
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+function pct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '--'; }
+function signed(v) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) : '--'; }
+
+function showDetail(slotId) {
+  if (!currentPicks) return;
+  const pick = currentPicks[String(slotId)];
+  const slot = slotById[slotId];
+  if (!pick || !slot) return;
+
+  // Determine teams
+  let teamA, teamB;
+  if (slot.round_num === 1) {
+    teamA = slot.team_a;
+    teamB = slot.team_b;
+  } else {
+    const feeders = feedersOf(slotId);
+    teamA = feeders[0] ? currentPicks[String(feeders[0].slot_id)]?.winner : null;
+    teamB = feeders[1] ? currentPicks[String(feeders[1].slot_id)]?.winner : null;
+  }
+
+  const roundName = ROUND_NAMES[pick.round_num] || ('Round ' + pick.round_num);
+  document.getElementById('detail-title').textContent = roundName + ' Matchup';
+
+  const body = document.getElementById('detail-body');
+  let html = '';
+
+  // Team cards
+  [teamA, teamB].forEach(name => {
+    if (!name) return;
+    const t = TEAMS[name] || {};
+    const o = OWNERSHIP[name] || {};
+    const isWinner = name === pick.winner;
+    const cardClass = isWinner ? 'winner-card' : 'loser-card';
+    const roundOwn = o.round_ownership ? o.round_ownership[String(pick.round_num)] : null;
+    const roundLev = o.leverage_by_round ? o.leverage_by_round[String(pick.round_num)] : null;
+
+    html += `<div class="team-card ${cardClass}">`;
+    html += `<div class="tc-name">${isWinner ? '&#x2714; ' : ''}${name}</div>`;
+    html += `<div class="tc-meta">${t.seed || '?'}-seed &middot; ${t.conference || '?'} &middot; ${t.record || '?'}</div>`;
+    html += `<div class="tc-grid">`;
+    html += `<div class="tc-stat"><span class="tc-stat-label">KenPom</span><span class="tc-stat-value">#${t.kenpom_rank || '?'}</span></div>`;
+    html += `<div class="tc-stat"><span class="tc-stat-label">AdjEM</span><span class="tc-stat-value">${signed(t.adj_em)}</span></div>`;
+    html += `<div class="tc-stat"><span class="tc-stat-label">AdjO</span><span class="tc-stat-value">${t.adj_o != null ? t.adj_o.toFixed(1) : '--'}</span></div>`;
+    html += `<div class="tc-stat"><span class="tc-stat-label">AdjD</span><span class="tc-stat-value">${t.adj_d != null ? t.adj_d.toFixed(1) : '--'}</span></div>`;
+    if (t.barthag != null) html += `<div class="tc-stat"><span class="tc-stat-label">Barthag</span><span class="tc-stat-value">${t.barthag.toFixed(3)}</span></div>`;
+    if (t.wab != null) html += `<div class="tc-stat"><span class="tc-stat-label">WAB</span><span class="tc-stat-value">${signed(t.wab)}</span></div>`;
+    if (t.top25_wins != null && t.top25_losses != null) html += `<div class="tc-stat"><span class="tc-stat-label">vs Top 25</span><span class="tc-stat-value">${t.top25_wins}-${t.top25_losses}</span></div>`;
+    // Public ownership for this round
+    if (roundOwn != null) html += `<div class="tc-stat"><span class="tc-stat-label">Public % (${roundName})</span><span class="tc-stat-value">${pct(roundOwn)}</span></div>`;
+    html += `</div></div>`;
+  });
+
+  // Pick summary
+  const winnerOwn = OWNERSHIP[pick.winner] || {};
+  const winRoundOwn = winnerOwn.round_ownership ? winnerOwn.round_ownership[String(pick.round_num)] : null;
+
+  html += `<div class="pick-summary"><h3>Pick Analysis</h3>`;
+  html += `<div class="ps-row"><span class="ps-label">Winner</span><span class="ps-value">${pick.winner} ${pick.confidence}</span></div>`;
+  html += `<div class="ps-row"><span class="ps-label">Upset?</span><span class="ps-value">${pick.is_upset ? 'Yes' : 'No'}</span></div>`;
+  html += `<div class="ps-row"><span class="ps-label">Leverage</span><span class="ps-value">${pick.leverage.toFixed(4)}</span></div>`;
+  if (winRoundOwn != null) {
+    html += `<div class="ps-row"><span class="ps-label">Public picking ${pick.winner} here</span><span class="ps-value">${pct(winRoundOwn)}</span></div>`;
+  }
+  // Title ownership if this is a late round
+  if (pick.round_num >= 5 && winnerOwn.title_ownership != null) {
+    html += `<div class="ps-row"><span class="ps-label">Public title %</span><span class="ps-value">${pct(winnerOwn.title_ownership)}</span></div>`;
+    if (winnerOwn.title_leverage != null) {
+      html += `<div class="ps-row"><span class="ps-label">Title leverage</span><span class="ps-value">${winnerOwn.title_leverage.toFixed(2)}</span></div>`;
+    }
+  }
+  html += `</div>`;
+
+  body.innerHTML = html;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+// ── Game Cell Builder ──
+
+function makeGameCell(slot, picks, champPath) {
+  const pick = picks[String(slot.slot_id)];
+  if (!pick) return null;
+
+  const div = document.createElement('div');
+  div.className = 'game';
+  if (pick.is_upset) div.classList.add('upset');
+  if (champPath.has(slot.slot_id)) div.classList.add('champ-path');
+
+  // Click handler
+  div.addEventListener('click', (e) => { e.stopPropagation(); showDetail(slot.slot_id); });
+
+  let teamA, teamB;
+  if (slot.round_num === 1) {
+    teamA = slot.team_a;
+    teamB = slot.team_b;
+  } else {
+    const feeders = feedersOf(slot.slot_id);
+    teamA = feeders[0] ? picks[String(feeders[0].slot_id)]?.winner : '?';
+    teamB = feeders[1] ? picks[String(feeders[1].slot_id)]?.winner : '?';
+  }
+
+  [teamA, teamB].forEach(team => {
+    const isWinner = team === pick.winner;
+    const teamInfo = TEAMS[team] || {};
+    const row = document.createElement('div');
+    row.className = 'game-team ' + (isWinner ? 'winner' : 'loser');
+    row.innerHTML = `<span class="seed">${teamInfo.seed || '?'}</span><span class="name" title="${team}">${team}</span>`;
+    if (isWinner) {
+      const confMap = {'\u{1f512} Lock':'\u{1f512}','\u{1f44d} Lean':'\u{1f44d}','\u{1f3b2} Gamble':'\u{1f3b2}'};
+      row.innerHTML += `<span class="conf">${confMap[pick.confidence]||''}</span>`;
+    }
+    div.appendChild(row);
+  });
+
+  return div;
+}
+
+// ── Champion Path ──
+
+function getChampPath(picks, champion) {
+  const path = new Set();
+  const champSlot = SLOTS.find(s => s.round_num === 6);
+  if (!champSlot) return path;
+  function trace(slotId) {
+    const pick = picks[String(slotId)];
+    if (!pick || pick.winner !== champion) return;
+    const slot = slotById[slotId];
+    if (!slot) return;
+    if (slot.round_num === 1 && slot.team_a !== champion && slot.team_b !== champion) return;
+    path.add(slotId);
+    feedersOf(slotId).forEach(f => trace(f.slot_id));
+  }
+  trace(champSlot.slot_id);
+  return path;
+}
+
+// ── Region Renderer ──
+
+function renderRegion(container, regionName, picks, champPath) {
+  const regionDiv = document.createElement('div');
+  regionDiv.className = 'region';
+  const label = document.createElement('div');
+  label.className = 'region-label';
+  label.textContent = regionName;
+  regionDiv.appendChild(label);
+
+  const roundsDiv = document.createElement('div');
+  roundsDiv.className = 'rounds';
+
+  for (let r = 1; r <= 4; r++) {
+    const roundSlots = SLOTS.filter(s => s.region === regionName && s.round_num === r)
+                            .sort((a,b) => a.slot_id - b.slot_id);
+    if (roundSlots.length === 0) continue;
+    const col = document.createElement('div');
+    col.className = 'round-col';
+    roundSlots.forEach(slot => {
+      const cell = makeGameCell(slot, picks, champPath);
+      if (cell) col.appendChild(cell);
+    });
+    roundsDiv.appendChild(col);
+  }
+
+  regionDiv.appendChild(roundsDiv);
+  container.appendChild(regionDiv);
+}
+
+// ── Center (FF + Championship) ──
+
+function renderCenter(container, picks, champPath, bracket) {
+  container.innerHTML = '';
+  const ffSlots = SLOTS.filter(s => s.round_num === 5).sort((a,b) => a.slot_id - b.slot_id);
+
+  const ffLabel1 = document.createElement('div');
+  ffLabel1.className = 'ff-label';
+  ffLabel1.textContent = 'Final Four';
+  container.appendChild(ffLabel1);
+  if (ffSlots[0]) {
+    const cell = makeGameCell(ffSlots[0], picks, champPath);
+    if (cell) { cell.classList.add('center-game'); container.appendChild(cell); }
+  }
+
+  const champSlot = SLOTS.find(s => s.round_num === 6);
+  const champLabel = document.createElement('div');
+  champLabel.className = 'championship-label';
+  champLabel.textContent = 'Championship';
+  container.appendChild(champLabel);
+  if (champSlot) {
+    const cell = makeGameCell(champSlot, picks, champPath);
+    if (cell) { cell.classList.add('center-game'); container.appendChild(cell); }
+  }
+
+  const champBox = document.createElement('div');
+  champBox.className = 'champion-box';
+  const champTeam = TEAMS[bracket.champion] || {};
+  champBox.innerHTML = `${bracket.champion}<br><span class="champ-seed">${champTeam.seed ? '(' + champTeam.seed + ' seed)' : ''}</span>`;
+  container.appendChild(champBox);
+
+  if (ffSlots[1]) {
+    const ffLabel2 = document.createElement('div');
+    ffLabel2.className = 'ff-label';
+    ffLabel2.textContent = 'Final Four';
+    container.appendChild(ffLabel2);
+    const cell = makeGameCell(ffSlots[1], picks, champPath);
+    if (cell) { cell.classList.add('center-game'); container.appendChild(cell); }
+  }
+}
+
+// ── Main Render ──
+
+function renderBracket(index) {
+  const bracket = BRACKETS[index];
+  currentPicks = bracket.picks;
+  const champPath = getChampPath(currentPicks, bracket.champion);
+
+  updateStats(bracket);
+
+  const layout = detectLayout();
+
+  const leftEl = document.getElementById('side-left');
+  leftEl.innerHTML = '';
+  layout.left.forEach(region => renderRegion(leftEl, region, currentPicks, champPath));
+
+  const rightEl = document.getElementById('side-right');
+  rightEl.innerHTML = '';
+  layout.right.forEach(region => renderRegion(rightEl, region, currentPicks, champPath));
+
+  renderCenter(document.getElementById('center'), currentPicks, champPath, bracket);
+}
+
+// ── Init ──
+populateSelector();
+renderBracket(0);
+</script>
+</body>
+</html>
+"""
+
+
+# ============================================================================
+# MAIN OUTPUT ORCHESTRATOR
+# ============================================================================
+
+def generate_all_output(brackets: list[CompleteBracket], teams: list[Team],
+                        ownership_profiles: list[OwnershipProfile],
+                        matchup_matrix: dict[str, dict[str, float]],
+                        bracket_structure: BracketStructure, config) -> None:
+    """Run the full output pipeline. Generates 5 output files."""
     logger.info("=== Generating output files ===")
-    
+
     ensure_dir(config.output_dir)
-    
-    # Use optimal bracket for main output
-    optimal = brackets[0]
-    
-    # Generate analysis report
-    analysis = generate_analysis_report(optimal, teams, ownership_profiles, matchup_matrix)
+
+    optimal = next((b for b in brackets if b.label == "optimal"), brackets[0])
+
+    # 1. analysis.md (comprehensive, uses all brackets)
+    analysis = generate_analysis_report(brackets, teams, ownership_profiles, matchup_matrix)
     analysis_file = f"{config.output_dir}/analysis.md"
     with open(analysis_file, 'w', encoding='utf-8') as f:
         f.write(analysis)
     logger.info(f"Saved analysis to {analysis_file}")
-    
-    # Generate ASCII bracket
+
+    # 2. bracket.txt (ASCII, optimal only)
     ascii_bracket = generate_ascii_bracket(optimal, bracket_structure)
     bracket_file = f"{config.output_dir}/bracket.txt"
     with open(bracket_file, 'w', encoding='utf-8') as f:
         f.write(ascii_bracket)
     logger.info(f"Saved ASCII bracket to {bracket_file}")
-    
-    # Generate JSON summary
-    summary = {
-        "optimal_bracket": optimal.to_dict(),
-        "alternates": [b.to_dict() for b in brackets[1:]],
-        "champion": optimal.champion,
-        "final_four": optimal.final_four,
-        "p_first_place": optimal.p_first_place,
-        "expected_score": optimal.expected_score
-    }
+
+    # 3. summary.json (enhanced with aggregate stats)
+    summary = generate_summary_json(brackets)
     summary_file = f"{config.output_dir}/summary.json"
     save_json(summary, summary_file)
     logger.info(f"Saved summary to {summary_file}")
-    
-    logger.info("=== Output generation complete ===")
+
+    # 4. all_brackets.json (every bracket with full picks)
+    all_brackets_file = f"{config.output_dir}/all_brackets.json"
+    save_json([b.to_dict() for b in brackets], all_brackets_file)
+    logger.info(f"Saved all {len(brackets)} brackets to {all_brackets_file}")
+
+    # 5. bracket.html (interactive viewer)
+    html = generate_bracket_html(brackets, bracket_structure, teams, ownership_profiles)
+    html_file = f"{config.output_dir}/bracket.html"
+    with open(html_file, 'w', encoding='utf-8') as f:
+        f.write(html)
+    logger.info(f"Saved interactive bracket viewer to {html_file}")
+
+    logger.info(f"=== Output generation complete ({len(brackets)} brackets) ===")
