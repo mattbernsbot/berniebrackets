@@ -8,6 +8,7 @@ import json
 import time
 import html
 from datetime import datetime
+from pathlib import Path
 
 def fetch_scoreboard(year, month, day):
     """Fetch scoreboard for a specific date from NCAA API."""
@@ -176,7 +177,9 @@ def main():
     print(f"Upsets found: {sum(1 for g in all_games if g['is_upset'])}")
     
     # Save to file
-    output_path = 'data/ncaa_tournament_real.json'
+    output_dir = Path(__file__).resolve().parent.parent / "data" / "upset_model"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / 'ncaa_tournament_real.json'
     with open(output_path, 'w') as f:
         json.dump(all_games, f, indent=2)
     

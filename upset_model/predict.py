@@ -28,59 +28,73 @@ class UpsetPredictor:
     """Predict upset probability using sklearn ensemble model."""
     
     def __init__(self, model_path: Optional[str] = None):
-        """Load the trained sklearn ensemble model.
-        
+        """Load the trained sklearn model.
+
         Args:
-            model_path: Path to sklearn_model.joblib. 
-                       Defaults to upset_model/models/sklearn_model.joblib
+            model_path: Path to sklearn_model.joblib.
+                       Defaults to data/upset_model/sklearn_model.joblib
         """
         if model_path is None:
-            model_path = Path(__file__).parent / "models" / "sklearn_model.joblib"
-        
+            model_path = Path(__file__).resolve().parent.parent / "data" / "upset_model" / "sklearn_model.joblib"
+
         self.model_package = joblib.load(str(model_path))
         self.scaler = self.model_package['scaler']
         self.lr = self.model_package['logistic']
-        self.rf = self.model_package['random_forest']
-        self.gb = self.model_package['gradient_boosting']
+        self.model_type = self.model_package.get('model_type', 'ensemble')
+
+        # Feature selection indices (Phase 2D) — which features to keep from extract_features()
+        self.feature_indices = self.model_package.get('feature_indices')
+
+        # Backward compat: load RF/GBM if present (old ensemble format)
+        self.rf = self.model_package.get('random_forest')
+        self.gb = self.model_package.get('gradient_boosting')
+        self.lr_uncalibrated = self.model_package.get('logistic_uncalibrated')
         self.model_path = str(model_path)
     
     def predict(self, team_a: dict, team_b: dict, round_num: int = 1,
-                team_a_lrmc: Optional[dict] = None, team_b_lrmc: Optional[dict] = None) -> float:
+                team_a_lrmc: Optional[dict] = None, team_b_lrmc: Optional[dict] = None,
+                team_a_torvik: Optional[dict] = None, team_b_torvik: Optional[dict] = None,
+                team_a_momentum: Optional[dict] = None, team_b_momentum: Optional[dict] = None,
+                spread: Optional[float] = None) -> float:
         """Predict P(upset) where team_a is favorite, team_b is underdog.
-        
+
         Args:
             team_a: Favorite team dict with keys: seed, adj_em, adj_o, adj_d, adj_t, luck (optional)
             team_b: Underdog team dict with keys: seed, adj_em, adj_o, adj_d, adj_t, luck (optional)
             round_num: Tournament round (1-6)
             team_a_lrmc: Optional LRMC stats for team_a (top25_wins, top25_losses, top25_games)
             team_b_lrmc: Optional LRMC stats for team_b
-        
+            team_a_torvik: Optional Torvik stats (barthag, wab)
+            team_b_torvik: Optional Torvik stats
+            team_a_momentum: Optional momentum stats (last10_adj_em, last10_win_pct)
+            team_b_momentum: Optional momentum stats
+            spread: Optional Vegas point spread (negative = favorite favored)
+
         Returns:
             P(team_b wins) between 0.01 and 0.99
-        
-        Example:
-            >>> predictor = UpsetPredictor()
-            >>> p = predictor.predict(
-            ...     team_a={'seed': 5, 'adj_em': 14, 'adj_o': 110, 'adj_d': 96, 'adj_t': 67, 'luck': 0.02},
-            ...     team_b={'seed': 12, 'adj_em': 11, 'adj_o': 108, 'adj_d': 97, 'adj_t': 65, 'luck': -0.01},
-            ...     round_num=1
-            ... )
-            >>> print(f"P(12-seed upset) = {p:.3f}")
         """
         # Extract features
-        x = extract_features(team_a, team_b, round_num, team_a_lrmc, team_b_lrmc)
+        x = extract_features(team_a, team_b, round_num, team_a_lrmc, team_b_lrmc,
+                             team_a_torvik, team_b_torvik,
+                             team_a_momentum, team_b_momentum, spread)
         x = np.array(x).reshape(1, -1)
-        
+
+        # Apply feature selection if model was trained with it
+        if self.feature_indices is not None:
+            x = x[:, self.feature_indices]
+
         # Scale for logistic regression
         x_scaled = self.scaler.transform(x)
-        
-        # Get predictions from each model
-        lr_pred = self.lr.predict_proba(x_scaled)[0, 1]
-        rf_pred = self.rf.predict_proba(x)[0, 1]
-        gb_pred = self.gb.predict_proba(x)[0, 1]
-        
-        # Ensemble (simple average)
-        p_upset = (lr_pred + rf_pred + gb_pred) / 3.0
+
+        if self.model_type in ('logistic_only', 'logistic_calibrated') or self.rf is None:
+            # LR-only or calibrated LR model
+            p_upset = self.lr.predict_proba(x_scaled)[0, 1]
+        else:
+            # Legacy ensemble (simple average)
+            lr_pred = self.lr.predict_proba(x_scaled)[0, 1]
+            rf_pred = self.rf.predict_proba(x)[0, 1]
+            gb_pred = self.gb.predict_proba(x)[0, 1]
+            p_upset = (lr_pred + rf_pred + gb_pred) / 3.0
         
         # Clip to reasonable range
         return max(0.01, min(0.99, p_upset))
@@ -118,35 +132,59 @@ class UpsetPredictor:
         # Try to get LRMC stats if available
         fav_lrmc = None
         dog_lrmc = None
-        
-        # Check for LRMC stats
+
         if hasattr(favorite, 'top25_games') and favorite.top25_games is not None:
             fav_lrmc = {
                 'top25_wins': getattr(favorite, 'top25_wins', 0),
                 'top25_losses': getattr(favorite, 'top25_losses', 0),
                 'top25_games': favorite.top25_games
             }
-        
+
         if hasattr(underdog, 'top25_games') and underdog.top25_games is not None:
             dog_lrmc = {
                 'top25_wins': getattr(underdog, 'top25_wins', 0),
                 'top25_losses': getattr(underdog, 'top25_losses', 0),
                 'top25_games': underdog.top25_games
             }
-        
-        return self.predict(fav_dict, dog_dict, round_num, fav_lrmc, dog_lrmc)
+
+        # Torvik stats
+        fav_torvik = None
+        dog_torvik = None
+        if hasattr(favorite, 'barthag') and favorite.barthag is not None:
+            fav_torvik = {'barthag': favorite.barthag, 'wab': getattr(favorite, 'wab', 0.0)}
+        if hasattr(underdog, 'barthag') and underdog.barthag is not None:
+            dog_torvik = {'barthag': underdog.barthag, 'wab': getattr(underdog, 'wab', 0.0)}
+
+        # Momentum stats
+        fav_momentum = None
+        dog_momentum = None
+        if hasattr(favorite, 'last10_adj_em') and favorite.last10_adj_em is not None:
+            fav_momentum = {
+                'last10_adj_em': favorite.last10_adj_em,
+                'last10_win_pct': getattr(favorite, 'last10_win_pct', 0.5)
+            }
+        if hasattr(underdog, 'last10_adj_em') and underdog.last10_adj_em is not None:
+            dog_momentum = {
+                'last10_adj_em': underdog.last10_adj_em,
+                'last10_win_pct': getattr(underdog, 'last10_win_pct', 0.5)
+            }
+
+        # Spread
+        spread_val = getattr(favorite, 'spread', None)
+
+        return self.predict(fav_dict, dog_dict, round_num, fav_lrmc, dog_lrmc,
+                            fav_torvik, dog_torvik, fav_momentum, dog_momentum, spread_val)
     
     def get_model_info(self) -> dict:
         """Return model metadata."""
         cv_results = self.model_package.get('cv_results', {})
         return {
-            "model_type": "sklearn_ensemble",
-            "models": ["LogisticRegression", "RandomForest", "GradientBoosting"],
-            "ensemble_method": "average",
+            "model_type": self.model_type,
             "training_n": self.model_package.get('training_n', 0),
             "n_upsets": self.model_package.get('n_upsets', 0),
             "years": self.model_package.get('years', []),
-            "cv_auc": cv_results.get('ensemble_auc', 0.0),
+            "cv_auc": cv_results.get('best_auc', cv_results.get('ensemble_auc', 0.0)),
             "baseline_auc": cv_results.get('baseline_auc', 0.0),
+            "feature_names": self.model_package.get('feature_names', []),
             "model_path": self.model_path
         }

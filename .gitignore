@@ -9,5 +9,4 @@ output/
 *.egg-info/
 .env
 node_modules/
-upset_model/data/
-upset_model/models/
+data/upset_model/

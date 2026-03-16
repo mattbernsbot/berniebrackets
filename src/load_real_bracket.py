@@ -8,57 +8,17 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from src.models import Team, BracketStructure, BracketSlot
 from src.constants import BRACKET_SEED_ORDER
-
-def normalize_name(name: str) -> str:
-    """Normalize team name for matching."""
-    # Handle common variations
-    name = name.lower().strip()
-    name = re.sub(r'[^\w\s]', '', name)  # Remove punctuation
-    name = re.sub(r'\s+', ' ', name)  # Normalize whitespace
-    
-    # Common aliases - must apply BEFORE partial matching
-    aliases = {
-        'miami fl': 'miami florida',
-        'miami ohio': 'miami oh',
-        'nc state': 'north carolina st',
-        'northern iowa': 'uni',
-        'uconn': 'connecticut',
-        'st johns': 'st john',
-        'saint marys': 'st marys',
-        'saint louis': 'st louis',
-        'long island': 'liu',
-        'queens nc': 'queens',
-        'prairie view am': 'prairie view',
-    }
-    
-    for old, new in aliases.items():
-        if old in name:
-            name = name.replace(old, new)
-    
-    return name
+from src.name_matching import normalize_team_name, match_team_name as _match_name
 
 
 def match_team_name(bracket_name: str, kenpom_teams: List[Dict]) -> Optional[Dict]:
     """Find best match for a team in KenPom data."""
-    norm_bracket = normalize_name(bracket_name)
-    
-    # Try exact match first
-    for team in kenpom_teams:
-        if normalize_name(team['name']) == norm_bracket:
-            return team
-    
-    # Try partial match (but avoid false positives like "Iowa" matching "Iowa St.")
-    for team in kenpom_teams:
-        norm_kenpom = normalize_name(team['name'])
-        
-        # Avoid substring matches for common short names
-        short_names = ['iowa', 'miami', 'st', 'texas', 'carolina', 'virginia', 'tennessee']
-        is_short = any(norm_bracket == sn or norm_kenpom == sn for sn in short_names)
-        
-        if not is_short:
-            if norm_bracket in norm_kenpom or norm_kenpom in norm_bracket:
-                return team
-    
+    team_names = [t['name'] for t in kenpom_teams]
+    matched = _match_name(bracket_name, team_names, source="generic")
+    if matched:
+        for t in kenpom_teams:
+            if t['name'] == matched:
+                return t
     return None
 
 

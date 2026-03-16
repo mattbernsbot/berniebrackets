@@ -4,7 +4,7 @@ All dataclasses support JSON serialization via to_dict() and from_dict() methods
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -44,10 +44,20 @@ class Team:
     tournament_appearances: int = 0
     is_auto_bid: bool = False
     bracket_position: int = 0
-    
+    # Phase 2 fields (Torvik, momentum, betting)
+    barthag: Optional[float] = None
+    wab: Optional[float] = None
+    last10_adj_em: Optional[float] = None
+    last10_win_pct: Optional[float] = None
+    spread: Optional[float] = None
+    # LRMC fields (top-25 performance)
+    top25_wins: Optional[int] = None
+    top25_losses: Optional[int] = None
+    top25_games: Optional[int] = None
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        d = {
             "name": self.name,
             "seed": self.seed,
             "region": self.region,
@@ -65,7 +75,25 @@ class Team:
             "is_auto_bid": self.is_auto_bid,
             "bracket_position": self.bracket_position
         }
-    
+        # Only include Phase 2 fields if set
+        if self.barthag is not None:
+            d["barthag"] = self.barthag
+        if self.wab is not None:
+            d["wab"] = self.wab
+        if self.last10_adj_em is not None:
+            d["last10_adj_em"] = self.last10_adj_em
+        if self.last10_win_pct is not None:
+            d["last10_win_pct"] = self.last10_win_pct
+        if self.spread is not None:
+            d["spread"] = self.spread
+        if self.top25_wins is not None:
+            d["top25_wins"] = self.top25_wins
+        if self.top25_losses is not None:
+            d["top25_losses"] = self.top25_losses
+        if self.top25_games is not None:
+            d["top25_games"] = self.top25_games
+        return d
+
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> 'Team':
         """Create Team from dictionary."""
@@ -85,7 +113,15 @@ class Team:
             conference=d.get("conference", ""),
             tournament_appearances=d.get("tournament_appearances", 0),
             is_auto_bid=d.get("is_auto_bid", False),
-            bracket_position=d.get("bracket_position", 0)
+            bracket_position=d.get("bracket_position", 0),
+            barthag=d.get("barthag"),
+            wab=d.get("wab"),
+            last10_adj_em=d.get("last10_adj_em"),
+            last10_win_pct=d.get("last10_win_pct"),
+            spread=d.get("spread"),
+            top25_wins=d.get("top25_wins"),
+            top25_losses=d.get("top25_losses"),
+            top25_games=d.get("top25_games"),
         )
 
 

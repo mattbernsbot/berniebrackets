@@ -7,9 +7,9 @@ NO SYNTHETIC DATA - extracts all 68 teams with their seeds and regions.
 import json
 import re
 import sys
+import urllib.request
 from pathlib import Path
 from bs4 import BeautifulSoup
-import requests
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -25,12 +25,13 @@ def fetch_url(url: str, timeout: int = 30) -> str:
         'Accept-Encoding': 'identity',
         'Accept-Language': 'en-US,en;q=0.9',
     }
-    
+
     print(f"Fetching {url}...")
-    response = requests.get(url, headers=headers, timeout=timeout)
-    response.raise_for_status()
-    print(f"✓ Received {len(response.text)} bytes")
-    return response.text
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        text = response.read().decode('utf-8')
+    print(f"✓ Received {len(text)} bytes")
+    return text
 
 
 def parse_bracket_wrapper_text(text: str) -> dict:

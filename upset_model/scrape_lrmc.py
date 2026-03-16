@@ -8,6 +8,7 @@ NO FAKE DATA. If a year fails, skip it and log the failure.
 import json
 import time
 import urllib.request
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
 
@@ -17,7 +18,8 @@ YEARS = [2011, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024,
 # Try multiple dates for each year (March snapshots before tournament)
 DATE_ATTEMPTS = ['0315', '0314', '0316', '0313', '0317', '0310', '0320', '0301']
 
-OUTPUT_FILE = '/home/clawdbot/.openclaw/workspace/projects/builder-engine/jobs/bracket-optimizer/upset_model/data/lrmc_historical.json'
+_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "upset_model"
+OUTPUT_FILE = str(_OUTPUT_DIR / "lrmc_historical.json")
 
 
 def fetch_lrmc_snapshot(year, date_suffix):
@@ -170,6 +172,7 @@ if __name__ == '__main__':
     all_data = scrape_all_years()
     
     # Save to JSON
+    _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"\n💾 Saving to {OUTPUT_FILE}...")
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(all_data, f, indent=2)

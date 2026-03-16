@@ -81,9 +81,36 @@ def cmd_collect(config) -> None:
     logger = logging.getLogger("bracket_optimizer")
     logger.info("Running data collection pipeline")
     
-    # Check if real bracket exists
+    # Check if real bracket exists; if not, try to fetch from ncaa.com
     real_bracket_file = f"{config.data_dir}/real_bracket_2026.json"
-    
+
+    if not os.path.exists(real_bracket_file):
+        logger.info("Real bracket not found — attempting to fetch from ncaa.com")
+        try:
+            import subprocess
+            # Step 1: Fetch raw HTML
+            result = subprocess.run(
+                [sys.executable, 'scripts/fetch_real_bracket.py'],
+                capture_output=True, text=True, timeout=60
+            )
+            # Step 2: Use the more reliable game-pod parser if raw HTML exists
+            raw_html = f"{config.data_dir}/ncaa_bracket_2026_raw.html"
+            if os.path.exists(raw_html):
+                result2 = subprocess.run(
+                    [sys.executable, 'scripts/parse_bracket_html.py'],
+                    capture_output=True, text=True, timeout=30
+                )
+                if result2.returncode == 0:
+                    logger.info("Successfully parsed real bracket from ncaa.com")
+                else:
+                    logger.warning(f"Bracket parse failed: {result2.stderr[:200] if result2.stderr else 'unknown error'}")
+            elif result.returncode == 0:
+                logger.info("Successfully fetched real bracket from ncaa.com")
+            else:
+                logger.warning(f"Bracket fetch failed: {result.stderr[:200] if result.stderr else 'unknown error'}")
+        except Exception as e:
+            logger.warning(f"Could not fetch real bracket: {e}")
+
     if os.path.exists(real_bracket_file):
         logger.info("Found real bracket - loading from ncaa.com data")
         
@@ -116,12 +143,16 @@ def cmd_collect(config) -> None:
         
         # Now load real bracket and match with KenPom
         teams, bracket = load_real_bracket(real_bracket_file, temp_kenpom_file)
-        
-        # Save merged data
+
+        # Enrich teams with Torvik (barthag, wab) and LRMC (top25 record)
+        from src.enrich import enrich_teams
+        teams = enrich_teams(teams, config.data_dir)
+
+        # Save merged + enriched data
         ensure_dir(config.data_dir)
         teams_file = f"{config.data_dir}/teams.json"
         save_json([t.to_dict() for t in teams], teams_file)
-        logger.info(f"Saved {len(teams)} teams to {teams_file}")
+        logger.info(f"Saved {len(teams)} enriched teams to {teams_file}")
         
         bracket_file = f"{config.data_dir}/bracket_structure.json"
         save_json(bracket.to_dict(), bracket_file)
@@ -139,7 +170,13 @@ def cmd_collect(config) -> None:
     else:
         logger.info("Real bracket not found - using KenPom-generated bracket")
         teams, bracket, yahoo_picks = collect_all(config)
-    
+
+        # Enrich fallback teams too
+        from src.enrich import enrich_teams
+        from src.utils import save_json
+        teams = enrich_teams(teams, config.data_dir)
+        save_json([t.to_dict() for t in teams], f"{config.data_dir}/teams.json")
+
     logger.info(f"✓ Collected data for {len(teams)} teams")
 
 
@@ -235,7 +272,9 @@ def cmd_full(config) -> None:
     preserve_files = {
         f"{config.data_dir}/real_bracket_2026.json",
         f"{config.data_dir}/ncaa_bracket_2026_raw.html",
-        f"{config.data_dir}/kenpom_2026_live.json"
+        f"{config.data_dir}/kenpom_2026_live.json",
+        f"{config.data_dir}/torvik_2026_live.json",
+        f"{config.data_dir}/lrmc_2026_live.json",
     }
     
     for stale in glob.glob(f"{config.data_dir}/*.json"):

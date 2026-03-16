@@ -1,31 +1,38 @@
 #!/usr/bin/env python3
-"""Train upset prediction model using sklearn with proper libraries.
+"""Train upset prediction model using sklearn.
 
 Uses:
-- sklearn for models (LogisticRegression, RandomForestClassifier, GradientBoostingClassifier)
+- sklearn for models (LogisticRegression with isotonic calibration)
 - pandas for data manipulation
 - numpy for numerics
-- scipy for statistics (if needed)
 
 Data sources:
 - ncaa_tournament_real.json — 798 real NCAA tournament games (2011-2025, D2 game removed)
 - kenpom_historical.json — 4,604 team records with AdjEM, AdjO, AdjD, AdjT, Luck
 - lrmc_historical.json — 4,242 team records with LRMC rank, vs-top-25 record
+- torvik_historical.json — 4,594 team records with Barthag, WAB (Phase 2A)
+- momentum_historical.json — per-team last-10-game stats (Phase 2B)
+- betting_lines_historical.json — tournament game spreads (Phase 2C)
 
-Features: 16 (9 original + 7 KenPom/LRMC)
+Features: 14 (7 Phase 1 + 7 Phase 2, pruned in Phase 2D)
 """
 
 import json
+import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.model_selection import LeaveOneGroupOut, StratifiedKFold
 from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 from sklearn.preprocessing import StandardScaler
 import joblib
 import warnings
+
+# Add project root to path so we can import shared name matching
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from src.name_matching import normalize_team_name, normalize_torvik_name, normalize_lrmc_name
 warnings.filterwarnings('ignore')
 
 # Import our feature engineering
@@ -41,7 +48,7 @@ def load_data():
     BUG FIX V2: 
     - Remove D2 game contamination (Grand Canyon vs Seattle Pacific 2013)
     """
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).resolve().parent.parent / "data" / "upset_model"
     
     # Load tournament games
     with open(data_dir / "ncaa_tournament_real.json") as f:
@@ -87,125 +94,59 @@ def load_data():
     # Load LRMC historical
     with open(data_dir / "lrmc_historical.json") as f:
         lrmc = pd.DataFrame(json.load(f))
-    
+
+    # Load Torvik historical (Phase 2A)
+    torvik_path = data_dir / "torvik_historical.json"
+    if torvik_path.exists():
+        with open(torvik_path) as f:
+            torvik = pd.DataFrame(json.load(f))
+    else:
+        print("  ⚠ torvik_historical.json not found — barthag/wab features will be zero")
+        torvik = pd.DataFrame()
+
+    # Load momentum historical (Phase 2B)
+    momentum_path = data_dir / "momentum_historical.json"
+    if momentum_path.exists():
+        with open(momentum_path) as f:
+            momentum = pd.DataFrame(json.load(f))
+    else:
+        print("  ⚠ momentum_historical.json not found — momentum features will be zero")
+        momentum = pd.DataFrame()
+
+    # Load betting lines (Phase 2C)
+    lines_path = data_dir / "betting_lines_historical.json"
+    if lines_path.exists():
+        with open(lines_path) as f:
+            lines = pd.DataFrame(json.load(f))
+    else:
+        print("  ⚠ betting_lines_historical.json not found — spread features will be zero")
+        lines = pd.DataFrame()
+
     # Return data + fix counts for reporting
-    return games, kenpom, lrmc, d2_games_removed
+    return games, kenpom, lrmc, torvik, momentum, lines, d2_games_removed
 
 
-def normalize_team_name(name: str) -> str:
-    """Normalize team names for joining (handle common aliases).
-    
-    BUG FIX 1 & 3: Expanded from 23 to 63 aliases to recover 120+ dropped games.
-    BUG FIX 3: Removed circular USC alias (kept 'Southern California' as canonical).
-    """
-    # Remove common suffixes/numbers
-    name = name.strip()
-    
-    # Common aliases (expanded to recover dropped games)
-    aliases = {
-        # Original aliases
-        'Ohio St. 1': 'Ohio St.',
-        'Ohio State': 'Ohio St.',
-        'UConn': 'Connecticut',
-        'St. John\'s': 'St. John\'s (NY)',
-        'Miami': 'Miami FL',
-        'Southern California': 'USC',  # Canonical: USC
-        # BUG FIX 3: REMOVED circular 'USC': 'Southern California'
-        'LSU': 'Louisiana St.',
-        'VCU': 'Virginia Commonwealth',
-        'UNLV': 'Nevada Las Vegas',
-        'UNC': 'North Carolina',
-        'UCSB': 'UC Santa Barbara',
-        'UCF': 'Central Florida',
-        'SMU': 'Southern Methodist',
-        'BYU': 'Brigham Young',
-        'TCU': 'Texas Christian',
-        'LIU': 'Long Island',
-        'UMBC': 'Maryland Baltimore County',
-        'UNC Asheville': 'UNC Asheville',
-        'St. Mary\'s': 'Saint Mary\'s',
-        'St. Bonaventure': 'St. Bonaventure',
-        'Mississippi': 'Ole Miss',
-        'College of Charleston': 'Col. of Charleston',
-        
-        # BUG FIX 1: NEW ALIASES (40+ additions)
-        'Miami (FL)': 'Miami FL',
-        'St. Mary\'s (CA)': 'Saint Mary\'s',
-        'Saint Mary\'s (CA)': 'Saint Mary\'s',
-        'NC State': 'N.C. State',
-        'North Carolina St.': 'N.C. State',  # KenPom used this 2011-2019, now uses N.C. State
-        'FGCU': 'Florida Gulf Coast',
-        'FDU': 'Fairleigh Dickinson',
-        'SFA': 'Stephen F. Austin',
-        'UNI': 'Northern Iowa',
-        'Middle Tenn.': 'Middle Tennessee',
-        'Northern Ky.': 'Northern Kentucky',
-        'Eastern Wash.': 'Eastern Washington',
-        'Coastal Caro.': 'Coastal Carolina',
-        'Western Ky.': 'Western Kentucky',
-        'Northern Colo.': 'Northern Colorado',
-        'Boston U.': 'Boston University',
-        'App State': 'Appalachian St.',
-        'Mt. St. Mary\'s': 'Mount St. Mary\'s',
-        'Albany (NY)': 'Albany',
-        'Fla. Atlantic': 'Florida Atlantic',
-        'Col. of Charleston': 'Charleston',
-        'College of Charleston': 'Charleston',
-        'Gardner-Webb': 'Gardner Webb',
-        'Loyola (IL)': 'Loyola Chicago',
-        'UALR': 'Arkansas Little Rock',
-        'Bakersfield': 'Cal St. Bakersfield',
-        'Saint Peter\'s': 'St. Peter\'s',
-        'UTSA': 'Texas San Antonio',
-        'Grambling': 'Grambling St.',
-        'McNeese': 'McNeese St.',
-        'Omaha': 'Nebraska Omaha',
-        'UNCW': 'UNC Wilmington',
-        'Southern U.': 'Southern',
-        'N.C. Central': 'North Carolina Central',
-        'N.C. A&T': 'North Carolina A&T',
-        'East Tenn. St.': 'East Tennessee St.',
-        'Eastern Ky.': 'Eastern Kentucky',
-        'Western Mich.': 'Western Michigan',
-        'Prairie View': 'Prairie View A&M',
-        'A&M-Corpus Christi': 'Texas A&M Corpus Chris',
-        'Southeast Mo. St.': 'Southeast Missouri St.',
-        'Saint Louis': 'St. Louis',
-        
-        # BUG FIX V2: Fix remaining 5 alias mismatches
-        'NC Asheville': 'UNC Asheville',  # Add missing 2011 alias
-        'Little Rock': 'Arkansas Little Rock',  # Add missing alias
-        'Louisiana': 'Louisiana Lafayette',  # Add missing alias
-    }
-    
-    # Apply alias mapping
-    for alias, canonical in aliases.items():
-        if name == alias:
-            return canonical
-    
-    # Remove trailing numbers (e.g., "Ohio St. 1" -> "Ohio St.")
-    import re
-    name = re.sub(r'\s+\d+$', '', name)
-    
-    return name
+
+# normalize_team_name, normalize_torvik_name, normalize_lrmc_name
+# are imported from src.name_matching (see top of file)
 
 
-def join_team_stats(games, kenpom, lrmc):
+def join_team_stats(games, kenpom, lrmc, torvik, momentum, lines):
     """Join tournament games with team stats from all sources.
-    
+
     Returns:
         DataFrame with columns: year, round_num, is_upset, team_a_*, team_b_*, etc.
     """
     # Normalize team names in all datasets
     kenpom['team_norm'] = kenpom['team'].apply(normalize_team_name)
-    lrmc['team_norm'] = lrmc['team'].apply(normalize_team_name)
+    lrmc['team_norm'] = lrmc['team'].apply(normalize_lrmc_name)
     games['team_a_norm'] = games['team_a'].apply(normalize_team_name)
     games['team_b_norm'] = games['team_b'].apply(normalize_team_name)
-    
+
     # Create lookup keys
     kenpom['key'] = kenpom['year'].astype(str) + '_' + kenpom['team_norm']
     lrmc['key'] = lrmc['year'].astype(str) + '_' + lrmc['team_norm']
-    
+
     # Join team_a stats
     games['key_a'] = games['year'].astype(str) + '_' + games['team_a_norm']
     games = games.merge(
@@ -222,7 +163,7 @@ def join_team_stats(games, kenpom, lrmc):
         'adj_t': 'adj_t_a',
         'luck': 'luck_a'
     })
-    
+
     # Join team_b stats
     games['key_b'] = games['year'].astype(str) + '_' + games['team_b_norm']
     games = games.merge(
@@ -239,7 +180,7 @@ def join_team_stats(games, kenpom, lrmc):
         'adj_t': 'adj_t_b',
         'luck': 'luck_b'
     })
-    
+
     # Join LRMC stats for team_a
     games = games.merge(
         lrmc[['key', 'top25_wins', 'top25_losses', 'top25_games']],
@@ -253,7 +194,7 @@ def join_team_stats(games, kenpom, lrmc):
         'top25_losses': 'top25_losses_a',
         'top25_games': 'top25_games_a'
     })
-    
+
     # Join LRMC stats for team_b
     games = games.merge(
         lrmc[['key', 'top25_wins', 'top25_losses', 'top25_games']],
@@ -267,7 +208,76 @@ def join_team_stats(games, kenpom, lrmc):
         'top25_losses': 'top25_losses_b',
         'top25_games': 'top25_games_b'
     })
-    
+
+    # Join Torvik stats (Phase 2A)
+    if not torvik.empty:
+        torvik['team_norm'] = torvik['team'].apply(normalize_torvik_name)
+        torvik['key'] = torvik['year'].astype(str) + '_' + torvik['team_norm']
+
+        games = games.merge(
+            torvik[['key', 'barthag', 'wab']],
+            left_on='key_a', right_on='key', how='left'
+        ).drop('key', axis=1)
+        games = games.rename(columns={'barthag': 'barthag_a', 'wab': 'wab_a'})
+
+        games = games.merge(
+            torvik[['key', 'barthag', 'wab']],
+            left_on='key_b', right_on='key', how='left'
+        ).drop('key', axis=1)
+        games = games.rename(columns={'barthag': 'barthag_b', 'wab': 'wab_b'})
+    else:
+        games['barthag_a'] = games['barthag_b'] = float('nan')
+        games['wab_a'] = games['wab_b'] = float('nan')
+
+    # Join momentum stats (Phase 2B)
+    if not momentum.empty:
+        momentum['team_norm'] = momentum['team'].apply(normalize_team_name)
+        momentum['key'] = momentum['year'].astype(str) + '_' + momentum['team_norm']
+
+        games = games.merge(
+            momentum[['key', 'last10_adj_em', 'last10_win_pct']],
+            left_on='key_a', right_on='key', how='left'
+        ).drop('key', axis=1)
+        games = games.rename(columns={
+            'last10_adj_em': 'last10_adj_em_a',
+            'last10_win_pct': 'last10_win_pct_a'
+        })
+
+        games = games.merge(
+            momentum[['key', 'last10_adj_em', 'last10_win_pct']],
+            left_on='key_b', right_on='key', how='left'
+        ).drop('key', axis=1)
+        games = games.rename(columns={
+            'last10_adj_em': 'last10_adj_em_b',
+            'last10_win_pct': 'last10_win_pct_b'
+        })
+    else:
+        games['last10_adj_em_a'] = games['last10_adj_em_b'] = float('nan')
+        games['last10_win_pct_a'] = games['last10_win_pct_b'] = float('nan')
+
+    # Join betting lines (Phase 2C)
+    if not lines.empty:
+        lines['team_a_norm'] = lines['team_a'].apply(normalize_team_name)
+        lines['team_b_norm'] = lines['team_b'].apply(normalize_team_name)
+        lines['key'] = (lines['year'].astype(str) + '_' +
+                        lines['team_a_norm'] + '_' + lines['team_b_norm'])
+
+        # Create matching keys (try both orderings)
+        games['lines_key1'] = (games['year'].astype(str) + '_' +
+                               games['team_a_norm'] + '_' + games['team_b_norm'])
+        games['lines_key2'] = (games['year'].astype(str) + '_' +
+                               games['team_b_norm'] + '_' + games['team_a_norm'])
+
+        lines_lookup = dict(zip(lines['key'], lines['spread']))
+        games['spread'] = games.apply(
+            lambda r: lines_lookup.get(r['lines_key1'],
+                      lines_lookup.get(r['lines_key2'], float('nan'))),
+            axis=1
+        )
+        games = games.drop(['lines_key1', 'lines_key2'], axis=1)
+    else:
+        games['spread'] = float('nan')
+
     return games
 
 
@@ -287,114 +297,120 @@ def build_feature_matrix(games):
     
     missing_kenpom = 0
     missing_lrmc = 0
-    
+    missing_torvik = 0
+    missing_momentum = 0
+    missing_spread = 0
+
     for idx, row in games.iterrows():
         # Skip if missing KenPom data (REQUIRED)
         if pd.isna(row['adj_em_a']) or pd.isna(row['adj_em_b']):
             missing_kenpom += 1
             continue
-        
+
         # Determine favorite vs underdog
         if row['seed_a'] < row['seed_b']:
-            # team_a is favorite
-            fav_stats = {
-                'seed': row['seed_a'],
-                'adj_em': row['adj_em_a'],
-                'adj_o': row['adj_o_a'],
-                'adj_d': row['adj_d_a'],
-                'adj_t': row['adj_t_a'],
-                'luck': row.get('luck_a', 0.0)
-            }
-            dog_stats = {
-                'seed': row['seed_b'],
-                'adj_em': row['adj_em_b'],
-                'adj_o': row['adj_o_b'],
-                'adj_d': row['adj_d_b'],
-                'adj_t': row['adj_t_b'],
-                'luck': row.get('luck_b', 0.0)
-            }
-            fav_lrmc = None
-            dog_lrmc = None
-            
-            # LRMC stats
-            if not pd.isna(row.get('top25_games_a')):
-                fav_lrmc = {
-                    'top25_wins': row['top25_wins_a'],
-                    'top25_losses': row['top25_losses_a'],
-                    'top25_games': row['top25_games_a']
-                }
-            else:
-                missing_lrmc += 1
-                
-            if not pd.isna(row.get('top25_games_b')):
-                dog_lrmc = {
-                    'top25_wins': row['top25_wins_b'],
-                    'top25_losses': row['top25_losses_b'],
-                    'top25_games': row['top25_games_b']
-                }
-            
+            fav_suffix, dog_suffix = 'a', 'b'
             upset = (row['winner'] == 'b')
-            
         elif row['seed_b'] < row['seed_a']:
-            # team_b is favorite
-            fav_stats = {
-                'seed': row['seed_b'],
-                'adj_em': row['adj_em_b'],
-                'adj_o': row['adj_o_b'],
-                'adj_d': row['adj_d_b'],
-                'adj_t': row['adj_t_b'],
-                'luck': row.get('luck_b', 0.0)
-            }
-            dog_stats = {
-                'seed': row['seed_a'],
-                'adj_em': row['adj_em_a'],
-                'adj_o': row['adj_o_a'],
-                'adj_d': row['adj_d_a'],
-                'adj_t': row['adj_t_a'],
-                'luck': row.get('luck_a', 0.0)
-            }
-            fav_lrmc = None
-            dog_lrmc = None
-            
-            # LRMC stats
-            if not pd.isna(row.get('top25_games_b')):
-                fav_lrmc = {
-                    'top25_wins': row['top25_wins_b'],
-                    'top25_losses': row['top25_losses_b'],
-                    'top25_games': row['top25_games_b']
-                }
-            else:
-                missing_lrmc += 1
-                
-            if not pd.isna(row.get('top25_games_a')):
-                dog_lrmc = {
-                    'top25_wins': row['top25_wins_a'],
-                    'top25_losses': row['top25_losses_a'],
-                    'top25_games': row['top25_games_a']
-                }
-            
+            fav_suffix, dog_suffix = 'b', 'a'
             upset = (row['winner'] == 'a')
         else:
-            # Equal seeds - skip
-            continue
-        
+            continue  # Equal seeds - skip
+
+        # KenPom stats
+        fav_stats = {
+            'seed': row[f'seed_{fav_suffix}'],
+            'adj_em': row[f'adj_em_{fav_suffix}'],
+            'adj_o': row[f'adj_o_{fav_suffix}'],
+            'adj_d': row[f'adj_d_{fav_suffix}'],
+            'adj_t': row[f'adj_t_{fav_suffix}'],
+            'luck': row.get(f'luck_{fav_suffix}', 0.0)
+        }
+        dog_stats = {
+            'seed': row[f'seed_{dog_suffix}'],
+            'adj_em': row[f'adj_em_{dog_suffix}'],
+            'adj_o': row[f'adj_o_{dog_suffix}'],
+            'adj_d': row[f'adj_d_{dog_suffix}'],
+            'adj_t': row[f'adj_t_{dog_suffix}'],
+            'luck': row.get(f'luck_{dog_suffix}', 0.0)
+        }
+
+        # LRMC stats
+        fav_lrmc = None
+        dog_lrmc = None
+        if not pd.isna(row.get(f'top25_games_{fav_suffix}')):
+            fav_lrmc = {
+                'top25_wins': row[f'top25_wins_{fav_suffix}'],
+                'top25_losses': row[f'top25_losses_{fav_suffix}'],
+                'top25_games': row[f'top25_games_{fav_suffix}']
+            }
+        else:
+            missing_lrmc += 1
+        if not pd.isna(row.get(f'top25_games_{dog_suffix}')):
+            dog_lrmc = {
+                'top25_wins': row[f'top25_wins_{dog_suffix}'],
+                'top25_losses': row[f'top25_losses_{dog_suffix}'],
+                'top25_games': row[f'top25_games_{dog_suffix}']
+            }
+
+        # Torvik stats
+        fav_torvik = None
+        dog_torvik = None
+        if not pd.isna(row.get(f'barthag_{fav_suffix}')):
+            fav_torvik = {'barthag': row[f'barthag_{fav_suffix}'], 'wab': row[f'wab_{fav_suffix}']}
+        else:
+            missing_torvik += 1
+        if not pd.isna(row.get(f'barthag_{dog_suffix}')):
+            dog_torvik = {'barthag': row[f'barthag_{dog_suffix}'], 'wab': row[f'wab_{dog_suffix}']}
+
+        # Momentum stats
+        fav_momentum = None
+        dog_momentum = None
+        if not pd.isna(row.get(f'last10_adj_em_{fav_suffix}')):
+            fav_momentum = {
+                'last10_adj_em': row[f'last10_adj_em_{fav_suffix}'],
+                'last10_win_pct': row[f'last10_win_pct_{fav_suffix}']
+            }
+        else:
+            missing_momentum += 1
+        if not pd.isna(row.get(f'last10_adj_em_{dog_suffix}')):
+            dog_momentum = {
+                'last10_adj_em': row[f'last10_adj_em_{dog_suffix}'],
+                'last10_win_pct': row[f'last10_win_pct_{dog_suffix}']
+            }
+
+        # Spread
+        spread_val = None
+        if not pd.isna(row.get('spread')):
+            spread_val = row['spread']
+        else:
+            missing_spread += 1
+
         # Extract features
         features = extract_features(
             fav_stats,
             dog_stats,
             row['round_num'],
             fav_lrmc,
-            dog_lrmc
+            dog_lrmc,
+            fav_torvik,
+            dog_torvik,
+            fav_momentum,
+            dog_momentum,
+            spread_val,
         )
-        
+
         X.append(features)
         y.append(1 if upset else 0)
         groups.append(row['year'])
         valid_indices.append(idx)
-    
+
     print(f"Missing data summary:")
     print(f"  KenPom: {missing_kenpom} games")
     print(f"  LRMC: {missing_lrmc} teams (imputed to default)")
+    print(f"  Torvik: {missing_torvik} teams (imputed to default)")
+    print(f"  Momentum: {missing_momentum} teams (imputed to default)")
+    print(f"  Spread: {missing_spread} games (imputed to 0.0)")
     
     return np.array(X), np.array(y), np.array(groups), valid_indices
 
@@ -429,15 +445,18 @@ def train_and_evaluate():
     
     # Load data
     print("\nLoading data...")
-    games, kenpom, lrmc, d2_games_removed = load_data()
-    
+    games, kenpom, lrmc, torvik, momentum, lines, d2_games_removed = load_data()
+
     print(f"  Tournament games: {len(games)}")
     print(f"  KenPom records: {len(kenpom)}")
     print(f"  LRMC records: {len(lrmc)}")
-    
+    print(f"  Torvik records: {len(torvik)}")
+    print(f"  Momentum records: {len(momentum)}")
+    print(f"  Betting lines: {len(lines)}")
+
     # Join stats
     print("\nJoining team stats...")
-    games = join_team_stats(games, kenpom, lrmc)
+    games = join_team_stats(games, kenpom, lrmc, torvik, momentum, lines)
     
     # Build feature matrix
     print("\nBuilding feature matrix...")
@@ -452,7 +471,7 @@ def train_and_evaluate():
     print("\n" + "="*80)
     print("FIXES APPLIED:")
     print("="*80)
-    print(f"  Barttorvik features: REMOVED (reverted to 16 features)")
+    print(f"  Phase 2 features: Torvik + momentum + spread")
     print(f"  D2 games removed: {d2_games_removed}")
     print(f"  Final match rate: {new_matched}/{total_games} ({100*new_matched/total_games:.1f}%)")
     print(f"  AdjEM fixed for years: [2011, 2013, 2014, 2015, 2016]")
@@ -481,176 +500,171 @@ def train_and_evaluate():
     print(f"  Features: {X.shape[1]}")
     print(f"  Years: {len(np.unique(groups))}")
     
+    # Phase 2D: Feature selection via L1 screening
+    print("\n" + "="*80)
+    print("PHASE 2D: FEATURE SELECTION (L1 screening)")
+    print("="*80)
+
+    scaler_screen = StandardScaler()
+    X_screen = scaler_screen.fit_transform(X)
+
+    # L1 (Lasso) screening: fit with strong regularization to zero out weak features
+    from sklearn.linear_model import LogisticRegressionCV as LR_CV
+    l1_cv = LR_CV(
+        penalty='l1', solver='saga', Cs=10, cv=5,
+        max_iter=5000, random_state=42, scoring='roc_auc'
+    )
+    l1_cv.fit(X_screen, y)
+    l1_coefs = l1_cv.coef_[0]
+
+    print(f"\nL1 screening (best C={l1_cv.C_[0]:.4f}):")
+    surviving = []
+    for i, name in enumerate(FEATURE_NAMES):
+        status = "KEEP" if abs(l1_coefs[i]) > 1e-6 else "DROP"
+        print(f"  {name:25s} coef={l1_coefs[i]:+.4f}  {status}")
+        if abs(l1_coefs[i]) > 1e-6:
+            surviving.append(i)
+
+    if len(surviving) < len(FEATURE_NAMES):
+        dropped = [FEATURE_NAMES[i] for i in range(len(FEATURE_NAMES)) if i not in surviving]
+        print(f"\nDropping {len(dropped)} features: {dropped}")
+        print(f"Keeping {len(surviving)} features: {[FEATURE_NAMES[i] for i in surviving]}")
+        X = X[:, surviving]
+        active_feature_names = [FEATURE_NAMES[i] for i in surviving]
+    else:
+        print("\nAll features survived L1 screening.")
+        active_feature_names = list(FEATURE_NAMES)
+
+    print(f"Final feature count: {X.shape[1]}")
+
     # Leave-one-year-out CV
     print(f"\nLEAVE-ONE-YEAR-OUT CV ({len(np.unique(groups))} folds):")
     print("-" * 60)
-    
+
     logo = LeaveOneGroupOut()
-    
-    # Results storage
-    results = {
-        'seed_baseline': [],
-        'logistic': [],
-        'random_forest': [],
-        'gradient_boosting': [],
-        'ensemble': []
-    }
-    
+
+    # C values to search over
+    C_VALUES = [0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
+
+    # Results storage — one entry per C value
+    results_by_c = {c: [] for c in C_VALUES}
+
     # Seed baseline
     print("Computing seed-only baseline...")
     baseline_auc = seed_baseline_auc(X, y, groups)
     print(f"  Seed-only baseline:       AUC = {baseline_auc:.4f}")
-    
-    # Train each model
+
+    # LOO-CV with C grid search (inner CV selects C, outer evaluates)
+    print(f"\nTesting C values: {C_VALUES}")
     for fold, (train_idx, test_idx) in enumerate(logo.split(X, y, groups)):
         test_year = groups[test_idx][0]
-        
+
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
-        
+
         # Standardize features
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
-        
-        # Logistic Regression
-        lr = LogisticRegression(
-            penalty='l2',
-            C=0.1,
-            max_iter=1000,
-            random_state=42
-        )
-        lr.fit(X_train_scaled, y_train)
-        lr_pred = lr.predict_proba(X_test_scaled)[:, 1]
-        results['logistic'].extend(lr_pred)
-        
-        # Random Forest
-        rf = RandomForestClassifier(
-            n_estimators=300,
-            max_depth=8,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            random_state=42,
-            n_jobs=-1
-        )
-        rf.fit(X_train, y_train)
-        rf_pred = rf.predict_proba(X_test)[:, 1]
-        results['random_forest'].extend(rf_pred)
-        
-        # Gradient Boosting
-        gb = GradientBoostingClassifier(
-            n_estimators=200,
-            max_depth=5,
-            learning_rate=0.05,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            subsample=0.8,
-            random_state=42
-        )
-        gb.fit(X_train, y_train)
-        gb_pred = gb.predict_proba(X_test)[:, 1]
-        results['gradient_boosting'].extend(gb_pred)
-        
-        # Ensemble (average of all three)
-        ensemble_pred = (lr_pred + rf_pred + gb_pred) / 3.0
-        results['ensemble'].extend(ensemble_pred)
-    
-    # Compute final AUCs
-    lr_auc = roc_auc_score(y, results['logistic'])
-    rf_auc = roc_auc_score(y, results['random_forest'])
-    gb_auc = roc_auc_score(y, results['gradient_boosting'])
-    ensemble_auc = roc_auc_score(y, results['ensemble'])
-    
+
+        # Evaluate each C value
+        for c_val in C_VALUES:
+            lr = LogisticRegression(
+                penalty='l2',
+                C=c_val,
+                max_iter=1000,
+                random_state=42
+            )
+            lr.fit(X_train_scaled, y_train)
+            lr_pred = lr.predict_proba(X_test_scaled)[:, 1]
+            results_by_c[c_val].extend(lr_pred)
+
+    # Find best C by AUC
+    auc_by_c = {c: roc_auc_score(y, preds) for c, preds in results_by_c.items()}
+    best_c = max(auc_by_c, key=auc_by_c.get)
+    best_auc = auc_by_c[best_c]
+
     print("\n" + "="*80)
-    print(f"LOO-CV RESULTS (16 features):")
+    print(f"LOO-CV RESULTS — LR-only with C grid search:")
     print("="*80)
     print(f"  Seed-only:    AUC = {baseline_auc:.4f}")
-    print(f"  Logistic:     AUC = {lr_auc:.4f}")
-    print(f"  Random For:   AUC = {rf_auc:.4f}")
-    print(f"  Grad Boost:   AUC = {gb_auc:.4f}")
-    print(f"  Ensemble:     AUC = {ensemble_auc:.4f}")
-    
+    for c_val in C_VALUES:
+        marker = " <<<" if c_val == best_c else ""
+        print(f"  LR (C={c_val:<5}): AUC = {auc_by_c[c_val]:.4f}{marker}")
+
     # Calculate improvement over seed-only
-    improvement = ensemble_auc - baseline_auc
-    improvement_pct = 100 * (ensemble_auc / baseline_auc - 1)
-    
-    print(f"  Improvement:  +{improvement:.4f} (+{improvement_pct:.1f}%)")
+    improvement = best_auc - baseline_auc
+    improvement_pct = 100 * (best_auc / baseline_auc - 1)
+
+    # Brier scores (calibration quality)
+    brier_by_c = {c: brier_score_loss(y, preds) for c, preds in results_by_c.items()}
+    best_brier = brier_by_c[best_c]
+
+    print(f"\n  Best C:       {best_c}")
+    print(f"  Best AUC:     {best_auc:.4f}")
+    print(f"  Brier score:  {best_brier:.4f} (lower is better)")
+    print(f"  Improvement:  +{improvement:.4f} (+{improvement_pct:.1f}% over seed-only)")
 
     
-    # Retrain best model (or ensemble) on ALL data
+    # Retrain best model on ALL data with isotonic calibration
     print("\n" + "="*60)
-    print("RETRAINING ON ALL DATA:")
+    print("RETRAINING ON ALL DATA (with calibration):")
     print("="*60)
-    
+
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    
-    # Train all models for ensemble
-    print("Training final models...")
-    
-    lr_final = LogisticRegression(penalty='l2', C=0.1, max_iter=1000, random_state=42)
+
+    print(f"Training final LR model (C={best_c}) with isotonic calibration...")
+
+    lr_base = LogisticRegression(penalty='l2', C=best_c, max_iter=1000, random_state=42)
+    # Wrap with isotonic calibration using 5-fold CV internally
+    lr_final = CalibratedClassifierCV(lr_base, method='isotonic', cv=5)
     lr_final.fit(X_scaled, y)
-    
-    rf_final = RandomForestClassifier(
-        n_estimators=300,
-        max_depth=8,
-        min_samples_split=10,
-        min_samples_leaf=5,
-        random_state=42,
-        n_jobs=-1
-    )
-    rf_final.fit(X, y)
-    
-    gb_final = GradientBoostingClassifier(
-        n_estimators=200,
-        max_depth=5,
-        learning_rate=0.05,
-        min_samples_split=10,
-        min_samples_leaf=5,
-        subsample=0.8,
-        random_state=42
-    )
-    gb_final.fit(X, y)
-    
-    # Save models
-    models_dir = Path(__file__).parent / "models"
-    models_dir.mkdir(exist_ok=True)
-    
-    print(f"\nSaving models to {models_dir}/")
-    
-    # Save all models + scaler as ensemble
+
+    # Also train uncalibrated for coefficient inspection
+    lr_uncalib = LogisticRegression(penalty='l2', C=best_c, max_iter=1000, random_state=42)
+    lr_uncalib.fit(X_scaled, y)
+
+    # Save model
+    models_dir = Path(__file__).resolve().parent.parent / "data" / "upset_model"
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\nSaving model to {models_dir}/")
+
     model_package = {
+        'model_type': 'logistic_calibrated',
         'scaler': scaler,
         'logistic': lr_final,
-        'random_forest': rf_final,
-        'gradient_boosting': gb_final,
-        'feature_names': FEATURE_NAMES,
+        'logistic_uncalibrated': lr_uncalib,
+        'best_c': best_c,
+        'feature_names': active_feature_names,
+        'feature_indices': surviving if len(surviving) < len(FEATURE_NAMES) else list(range(len(FEATURE_NAMES))),
         'cv_results': {
             'baseline_auc': baseline_auc,
-            'logistic_auc': lr_auc,
-            'random_forest_auc': rf_auc,
-            'gradient_boosting_auc': gb_auc,
-            'ensemble_auc': ensemble_auc
+            'best_auc': best_auc,
+            'best_brier': best_brier,
+            'auc_by_c': {str(c): auc for c, auc in auc_by_c.items()},
         },
         'training_n': len(X),
         'n_upsets': int(y.sum()),
         'years': sorted(np.unique(groups).tolist())
     }
-    
+
     joblib.dump(model_package, models_dir / "sklearn_model.joblib")
     print(f"  ✓ Saved sklearn_model.joblib")
-    
-    # Feature importance (from Random Forest)
+
+    # Feature importance (LR coefficients from uncalibrated model)
     print("\n" + "="*80)
-    print("TOP FEATURES (Random Forest importance):")
+    print("TOP FEATURES (LR coefficient magnitude):")
     print("="*80)
-    
-    importances = rf_final.feature_importances_
-    indices = np.argsort(importances)[::-1]
-    
-    for i in range(min(15, len(FEATURE_NAMES))):
+
+    coefs = np.abs(lr_uncalib.coef_[0])
+    indices = np.argsort(coefs)[::-1]
+
+    for i in range(len(active_feature_names)):
         idx = indices[i]
-        print(f"  {i+1:2d}. {FEATURE_NAMES[idx]:25s} {importances[idx]:.4f}")
+        sign = "+" if lr_uncalib.coef_[0][idx] > 0 else "-"
+        print(f"  {i+1:2d}. {active_feature_names[idx]:25s} {sign}{coefs[idx]:.4f}")
     
     # Spot checks
     print("\n" + "="*80)
@@ -674,13 +688,14 @@ def train_and_evaluate():
         print(f"    Found in tournament data: {len(umbc_game)} game(s)")
     
     print("\n" + "="*80)
-    print("V2 TRAINING COMPLETE!")
+    print("TRAINING COMPLETE!")
     print("="*80)
     print(f"Model saved: {models_dir / 'sklearn_model.joblib'}")
-    print(f"Features: {len(FEATURE_NAMES)} (down from 21)")
+    print(f"Model type: LR-only (C={best_c})")
+    print(f"Features: {len(active_feature_names)} (from {len(FEATURE_NAMES)} candidates)")
     print(f"Training samples: {len(X)}")
     print(f"Match rate: {100*len(valid_indices)/len(games):.1f}%")
-    print(f"Ensemble AUC: {ensemble_auc:.4f}")
+    print(f"LOO-CV AUC: {best_auc:.4f} (+{improvement_pct:.1f}% over seed-only)")
 
 
 if __name__ == "__main__":
