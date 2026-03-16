@@ -227,6 +227,7 @@ def cmd_bracket(config) -> None:
 def cmd_full(config) -> None:
     """Execute the 'full' command — collect → analyze → bracket."""
     import glob
+    from datetime import datetime, timezone
     logger = logging.getLogger("bracket_optimizer")
     logger.info("Running full pipeline")
     
@@ -242,13 +243,15 @@ def cmd_full(config) -> None:
             os.remove(stale)
             logger.debug(f"Removed {stale}")
     
-    for stale in glob.glob(f"{config.output_dir}/*"):
-        os.remove(stale)
-    
     logger.info("Cleared previous run data (preserved real bracket)")
     
     cmd_collect(config)
     cmd_analyze(config)
+    
+    # Set output_dir to results/<timestamp>/ for this run
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+    config.output_dir = f"results/{timestamp}"
+    
     cmd_bracket(config)
     
     logger.info("✓ Full pipeline complete")
