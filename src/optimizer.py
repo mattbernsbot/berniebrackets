@@ -4,11 +4,16 @@ Implements a 7-component pipeline that maximizes P(1st place) in bracket pools.
 """
 
 import logging
+import os
 import random
 import copy
 from statistics import mean, median
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
+from itertools import product as _iproduct, combinations as _icombinations
 from math import sqrt
+
+import numpy as np
 
 from src.models import (
     Team, BracketStructure, BracketSlot, CompleteBracket, BracketPick,
@@ -656,18 +661,23 @@ def construct_deterministic_bracket(
 # COMPONENT 2: SCENARIO GENERATOR
 # ============================================================================
 
-def select_regional_champion(region: str, 
-                            teams: list[Team], 
-                            matchup_matrix: dict[str, dict[str, float]], 
-                            ownership_profiles: list[OwnershipProfile], 
-                            bracket: BracketStructure, 
-                            chaos_level: str, 
-                            pool_size: int, 
-                            exclude_teams: list[str] | None = None) -> tuple[str, float]:
-    """Select the best team to win a region given a chaos level."""
+def select_regional_champion(region: str,
+                            teams: list[Team],
+                            matchup_matrix: dict[str, dict[str, float]],
+                            ownership_profiles: list[OwnershipProfile],
+                            bracket: BracketStructure,
+                            chaos_level: str,
+                            pool_size: int,
+                            exclude_teams: list[str] | None = None,
+                            top_k: int = 1) -> tuple[str, float] | list[tuple[str, float]]:
+    """Select the best team(s) to win a region given a chaos level.
+
+    top_k=1 (default): returns (team_name, value) — same behaviour as before.
+    top_k>1: returns list[tuple[str, float]] sorted by regional_value descending.
+    """
     exclude_teams = exclude_teams or []
     regional_teams = [t for t in teams if t.region == region and t.name not in exclude_teams]
-    
+
     # Filter by seed based on chaos level
     if chaos_level == "low":
         regional_teams = [t for t in regional_teams if t.seed <= 2]
@@ -675,88 +685,90 @@ def select_regional_champion(region: str,
         regional_teams = [t for t in regional_teams if t.seed <= 4]
     else:  # high
         regional_teams = [t for t in regional_teams if t.seed <= 7]
-    
+
     if not regional_teams:
         regional_teams = [t for t in teams if t.region == region and t.name not in exclude_teams]
-    
+
     ownership_map = {p.team: p for p in ownership_profiles}
-    best_team = None
-    best_value = 0.0
-    
+    ranked: list[tuple[str, float]] = []
+
     for team in regional_teams:
-        # Estimate P(wins region) as product of win probs on likely path
         path_info = compute_champion_path(team, bracket, matchup_matrix, teams)
-        # Take first 4 games (R1-R4 = regional championship)
         regional_prob = 1.0
-        for i, (_, opponent, win_prob) in enumerate(path_info.opponents[:4]):
+        for _, _opp, win_prob in path_info.opponents[:4]:
             regional_prob *= win_prob
-        
-        # Get ownership
+
         profile = ownership_map.get(team.name)
         ff_ownership = profile.round_ownership.get(5, 0.01) if profile else SEED_OWNERSHIP_CURVES.get(team.seed, {}).get(5, 0.01)
         ff_ownership = max(0.001, ff_ownership)
-        
-        # Regional value
+
         regional_value = regional_prob / ((pool_size - 1) * ff_ownership + 1)
-        
-        if regional_value > best_value:
-            best_value = regional_value
-            best_team = team.name
-    
-    return best_team or regional_teams[0].name, best_value
+        ranked.append((team.name, regional_value))
+
+    ranked.sort(key=lambda x: x[1], reverse=True)
+
+    if not ranked:
+        fallback = regional_teams[0].name if regional_teams else ""
+        return (fallback, 0.0) if top_k == 1 else [(fallback, 0.0)]
+
+    if top_k == 1:
+        return ranked[0][0], ranked[0][1]
+    return ranked[:top_k]
 
 
-def select_cinderella(teams: list[Team], 
-                     matchup_matrix: dict[str, dict[str, float]], 
-                     ownership_profiles: list[OwnershipProfile], 
-                     bracket: BracketStructure, 
-                     chaos_regions: list[str], 
-                     pool_size: int) -> tuple[str | None, int | None]:
-    """Select a Cinderella team for a deep tournament run."""
+def select_cinderella(teams: list[Team],
+                     matchup_matrix: dict[str, dict[str, float]],
+                     ownership_profiles: list[OwnershipProfile],
+                     bracket: BracketStructure,
+                     chaos_regions: list[str],
+                     pool_size: int,
+                     top_k: int = 1) -> tuple[str | None, int | None] | list[tuple[str, int]]:
+    """Select Cinderella team(s) for a deep tournament run.
+
+    top_k=1 (default): returns (team_name, target_round) — same behaviour as before.
+    top_k>1: returns list[tuple[str, int]] sorted by upset_prob descending.
+    """
     if not chaos_regions:
-        return None, None
-    
+        return (None, None) if top_k == 1 else []
+
     candidates = []
     team_map = {t.name: t for t in teams}
-    
+
     for team in teams:
         if team.region not in chaos_regions:
             continue
         if team.seed < 10 or team.seed > 14:
             continue
-        
-        # Check R1 matchup
+
         r1_slot = find_team_r1_slot(team.name, bracket)
         if not r1_slot:
             continue
-        
+
         opponent_name = r1_slot.team_b if r1_slot.team_a == team.name else r1_slot.team_a
         opponent = team_map.get(opponent_name)
-        
         if not opponent:
             continue
-        
-        # Check if AdjEM gap is reasonable
+
         adjem_gap = abs(team.adj_em - opponent.adj_em)
         if adjem_gap > 10:
             continue
-        
-        # Get upset probability
+
         upset_prob = matchup_matrix.get(team.name, {}).get(opponent_name, 0.0)
         if upset_prob < 0.2:
             continue
-        
-        # Determine target round
+
         target_round = 3 if team.seed <= 12 else 2
-        
         candidates.append((team.name, target_round, upset_prob))
-    
+
     if not candidates:
-        return None, None
-    
-    # Pick the one with highest upset probability
-    best = max(candidates, key=lambda x: x[2])
-    return best[0], best[1]
+        return (None, None) if top_k == 1 else []
+
+    candidates.sort(key=lambda x: x[2], reverse=True)
+
+    if top_k == 1:
+        best = candidates[0]
+        return best[0], best[1]
+    return [(c[0], c[1]) for c in candidates[:top_k]]
 
 
 def generate_scenarios(champion_candidates: list[ChampionCandidate],
@@ -765,126 +777,150 @@ def generate_scenarios(champion_candidates: list[ChampionCandidate],
                       ownership_profiles: list[OwnershipProfile],
                       bracket: BracketStructure,
                       pool_size: int) -> list[Scenario]:
-    """Generate ~72 scenarios covering top 12 champion candidates at varying chaos levels.
+    """Generate ~600 scenarios covering expanded FF compositions, cinderella variants,
+    and chaos-region permutations across top 12 champion candidates.
 
-    Strategy:
-    - All 12 champions: 3 chaos levels (low/medium/high) × 2 FF compositions = 6 each
-    - Primary FF = best regional picks; Variant FF = next-best regional picks
-    Total: ~72 scenarios (fewer if <12 candidates or variant FF matches primary)
+    Expansion axes vs the original ~72-scenario design:
+    - FF composition: top-3 candidates per region → enumerate up to 8 combos per cell
+      (original: 2 combos per cell)
+    - Cinderella: top-2 candidates for medium/high chaos
+      (original: 1)
+    - Medium chaos-regions: 2 different region-pairs instead of 1 fixed pair
+      (original: 1)
+
+    Approximate budget: 12 × (low:6 + medium:2×8×2 + high:8×2) ≈ 600 scenarios.
     """
-    logger.info("=== COMPONENT 2: Generating scenarios ===")
+    logger.info("=== COMPONENT 2: Generating scenarios (expanded ~600) ===")
 
     if not champion_candidates:
         logger.warning("No champion candidates provided")
         return []
 
-    scenarios = []
+    scenarios: list[Scenario] = []
     regions = list(set(t.region for t in teams if t.region))
 
-    def _build_ff(champ_cand, chaos_level, exclude_ff=None):
-        """Build Final Four dict for a champion at a given chaos level."""
-        exclude_ff = exclude_ff or {}
-        ff_teams = {}
-        for region in regions:
-            if region == champ_cand.region:
-                ff_teams[region] = champ_cand.team_name
-            else:
-                # Determine regional chaos: champion's region is always stable
-                region_chaos = chaos_level
-                exclude_list = [exclude_ff[region]] if region in exclude_ff else []
-                team_name, _ = select_regional_champion(
-                    region, teams, matchup_matrix, ownership_profiles, bracket,
-                    region_chaos, pool_size, exclude_teams=exclude_list
-                )
-                ff_teams[region] = team_name
-        return ff_teams
+    # ---- helpers ----
 
-    def _chaos_regions_for_level(champ_region, chaos_level):
-        """Determine which regions get upset activity."""
-        other_regions = [r for r in regions if r != champ_region]
+    def _chaos_regions_options(champ_region: str, chaos_level: str) -> list[list[str]]:
+        """Return the list of chaos_regions lists to iterate for this chaos level.
+
+        low  → [[]]  (one option: no chaos regions)
+        medium → up to 2 pairs from C(other_regions, 2)
+        high   → [other_regions]  (one option: all non-champion regions)
+        """
+        other = [r for r in regions if r != champ_region]
         if chaos_level == "low":
-            return []
+            return [[]]
         elif chaos_level == "medium":
-            return other_regions[:min(2, len(other_regions))]
+            if len(other) >= 2:
+                pairs = list(_icombinations(other, 2))
+                return [list(p) for p in pairs[:2]]   # at most 2 pairs
+            return [other]
         else:  # high
-            return other_regions
+            return [other]
 
-    def _maybe_cinderella(chaos_level, chaos_regions):
-        """Select a Cinderella for medium/high chaos scenarios."""
-        if chaos_level == "low":
-            return None, None
-        cinderella, cinder_target = select_cinderella(
-            teams, matchup_matrix, ownership_profiles, bracket, chaos_regions, pool_size
-        )
-        # Force a Cinderella for high chaos if none found naturally
-        if not cinderella and chaos_level == "high" and chaos_regions:
-            cinder_candidates = [t for t in teams if t.region in chaos_regions and t.seed == 12]
-            if cinder_candidates:
-                cinderella = cinder_candidates[0].name
-                cinder_target = 3
-        return cinderella, cinder_target
+    def _get_ff_combinations(champ_cand: ChampionCandidate,
+                             chaos_level: str,
+                             non_champ_regions: list[str],
+                             max_combos: int) -> list[dict[str, str]]:
+        """Enumerate up to max_combos FF dicts for a (champion, chaos_level) cell.
 
-    scenario_count = 0
+        Gets top-3 regional candidates per non-champion region, takes their
+        cross-product sorted by combined regional_value, deduplicates.
+        """
+        per_region: dict[str, list[tuple[str, float]]] = {}
+        for region in non_champ_regions:
+            ranked = select_regional_champion(
+                region, teams, matchup_matrix, ownership_profiles, bracket,
+                chaos_level, pool_size, top_k=3
+            )
+            # top_k>1 always returns a list
+            per_region[region] = ranked if isinstance(ranked, list) else [ranked]
 
-    # --- 6 scenarios per champion: 3 chaos levels × 2 FF compositions ---
-    for rank, champ_cand in enumerate(champion_candidates):
+        combos_raw: list[tuple[dict[str, str], float]] = []
+        for combo in _iproduct(*[per_region[r] for r in non_champ_regions]):
+            ff_dict: dict[str, str] = {champ_cand.region: champ_cand.team_name}
+            combined_value = 1.0
+            for region, (team_name, value) in zip(non_champ_regions, combo):
+                ff_dict[region] = team_name
+                combined_value *= max(value, 0.001)
+            combos_raw.append((ff_dict, combined_value))
+
+        combos_raw.sort(key=lambda x: x[1], reverse=True)
+
+        seen: set[tuple] = set()
+        result: list[dict[str, str]] = []
+        for ff_dict, _ in combos_raw:
+            key = tuple(sorted(ff_dict.items()))
+            if key not in seen:
+                seen.add(key)
+                result.append(ff_dict)
+                if len(result) >= max_combos:
+                    break
+        return result
+
+    # ---- main loop ----
+
+    _stype = {"low": "chalk", "medium": "contrarian", "high": "chaos"}
+    _max_ff = {"low": 6, "medium": 8, "high": 8}
+
+    for champ_cand in champion_candidates:
         other_regions = [r for r in regions if r != champ_cand.region]
 
         for chaos_level in ["low", "medium", "high"]:
-            chaos_regions = _chaos_regions_for_level(champ_cand.region, chaos_level)
-            cinderella, cinder_target = _maybe_cinderella(chaos_level, chaos_regions)
+            scenario_type = _stype[chaos_level]
+            max_ff = _max_ff[chaos_level]
 
-            # Map chaos_level to scenario_type
-            if chaos_level == "low":
-                scenario_type = "chalk"
-            elif chaos_level == "medium":
-                scenario_type = "contrarian"
-            else:
-                scenario_type = "chaos"
+            for chaos_regions in _chaos_regions_options(champ_cand.region, chaos_level):
+                # Cinderella variants for this (chaos_level, chaos_regions) combo
+                if chaos_level == "low":
+                    cinderella_variants: list[tuple[str | None, int | None]] = [(None, None)]
+                else:
+                    raw = select_cinderella(
+                        teams, matchup_matrix, ownership_profiles, bracket,
+                        chaos_regions, pool_size, top_k=2
+                    )
+                    if raw:
+                        cinderella_variants = raw  # type: ignore[assignment]
+                    else:
+                        # Force a seed-12 cinderella for high chaos if none qualifies
+                        if chaos_level == "high" and chaos_regions:
+                            forced = [t for t in teams
+                                      if t.region in chaos_regions and t.seed == 12]
+                            cinderella_variants = [(forced[0].name, 3)] if forced else [(None, None)]
+                        else:
+                            cinderella_variants = [(None, None)]
 
-            # Primary FF composition
-            primary_ff = _build_ff(champ_cand, chaos_level)
-            scenarios.append(Scenario(
-                scenario_id=f"{scenario_type}_{champ_cand.team_name}_{chaos_level}",
-                scenario_type=scenario_type,
-                champion=champ_cand.team_name,
-                champion_seed=champ_cand.seed,
-                final_four=primary_ff,
-                chaos_regions=chaos_regions,
-                cinderella=cinderella,
-                cinderella_target_round=cinder_target,
-                chaos_level=chaos_level
-            ))
-            scenario_count += 1
+                # FF combinations for this cell
+                ff_combinations = _get_ff_combinations(
+                    champ_cand, chaos_level, other_regions, max_combos=max_ff
+                )
 
-            # Variant FF composition: swap non-champion regions to next-best picks
-            exclude_ff = {}
-            for region in other_regions[:2]:
-                exclude_ff[region] = primary_ff[region]
+                cr_tag = "".join(sorted(chaos_regions))[:8] if chaos_regions else ""
 
-            variant_ff = _build_ff(champ_cand, chaos_level, exclude_ff=exclude_ff)
+                for ff_idx, ff_dict in enumerate(ff_combinations):
+                    for cinder_idx, (cinderella, cinder_target) in enumerate(cinderella_variants):
+                        sid = f"{scenario_type}_{champ_cand.team_name}_{chaos_level}"
+                        if cr_tag:
+                            sid += f"_cr{cr_tag}"
+                        if ff_idx > 0:
+                            sid += f"_ff{ff_idx + 1}"
+                        if cinder_idx > 0:
+                            sid += f"_c{cinder_idx + 1}"
 
-            if variant_ff != primary_ff:
-                # Re-evaluate cinderella for variant (different FF context)
-                cinder_v, cinder_t_v = _maybe_cinderella(chaos_level, chaos_regions)
-                scenarios.append(Scenario(
-                    scenario_id=f"{scenario_type}_{champ_cand.team_name}_{chaos_level}_v2",
-                    scenario_type=scenario_type,
-                    champion=champ_cand.team_name,
-                    champion_seed=champ_cand.seed,
-                    final_four=variant_ff,
-                    chaos_regions=chaos_regions,
-                    cinderella=cinder_v,
-                    cinderella_target_round=cinder_t_v,
-                    chaos_level=chaos_level
-                ))
-                scenario_count += 1
+                        scenarios.append(Scenario(
+                            scenario_id=sid,
+                            scenario_type=scenario_type,
+                            champion=champ_cand.team_name,
+                            champion_seed=champ_cand.seed,
+                            final_four=ff_dict,
+                            chaos_regions=chaos_regions,
+                            cinderella=cinderella,
+                            cinderella_target_round=cinder_target,
+                            chaos_level=chaos_level
+                        ))
 
     logger.info(f"Generated {len(scenarios)} scenarios across {len(champion_candidates)} champions")
-    for scenario in scenarios:
-        logger.info(f"  {scenario.scenario_id}: champion={scenario.champion} "
-                    f"(seed {scenario.champion_seed}), chaos={scenario.chaos_level}")
-
     return scenarios
 
 
@@ -1086,7 +1122,18 @@ def construct_bracket_from_scenario(scenario: Scenario,
             ff_team, 4, bracket, matchup_matrix, teams, existing_picks
         )
         locked_slots.update(ff_path.path_slots)
-    
+
+    # PHASE 1.5: Lock cinderella path if specified
+    if scenario.cinderella and scenario.cinderella_target_round:
+        cinder_r1 = find_team_r1_slot(scenario.cinderella, bracket)
+        if cinder_r1 and cinder_r1.slot_id not in locked_slots:
+            cinder_path = build_team_path(
+                scenario.cinderella, scenario.cinderella_target_round,
+                bracket, matchup_matrix, teams, existing_picks
+            )
+            locked_slots.update(cinder_path.path_slots)
+            logger.info(f"  Locked cinderella path: {scenario.cinderella} → R{scenario.cinderella_target_round}")
+
     # PHASE 2: Fill remaining R1 games with chalk (initial)
     for slot in bracket.slots:
         if slot.round_num == 1 and slot.slot_id not in existing_picks:
@@ -1157,8 +1204,12 @@ def construct_bracket_from_scenario(scenario: Scenario,
         # Get upset probability
         p_upset = matchup_matrix.get(underdog, {}).get(favorite, 0.0)
         
+        # Determine if this slot's region is a declared chaos region
+        is_chaos_region = bool(scenario.chaos_regions and slot.region in scenario.chaos_regions)
+        effective_floor = emv_floor - 1.5 if is_chaos_region else emv_floor
+
         # Add to candidates if it passes EMV floor (Gate 1)
-        if emv > emv_floor:
+        if emv > effective_floor:
             upset_candidates.append({
                 'slot_id': slot.slot_id,
                 'underdog': underdog,
@@ -1167,7 +1218,8 @@ def construct_bracket_from_scenario(scenario: Scenario,
                 'fav_seed': fav_seed,
                 'emv': emv,
                 'p_upset': p_upset,
-                'is_8_9': (fav_seed == 8 and dog_seed == 9) or (fav_seed == 9 and dog_seed == 8)
+                'is_8_9': (fav_seed == 8 and dog_seed == 9) or (fav_seed == 9 and dog_seed == 8),
+                'is_chaos_region': is_chaos_region,
             })
     
     # Sort by EMV descending
@@ -1198,13 +1250,15 @@ def construct_bracket_from_scenario(scenario: Scenario,
         if len(selected_upsets) >= target_max:
             break
         
-        # Check region cap
+        # Check region cap (chaos regions get +1 allowance)
         slot = next((s for s in bracket.slots if s.slot_id == upset['slot_id']), None)
         if slot:
             region = slot.region
-            if region_counts.get(region, 0) >= max_per_region:
+            is_chaos = upset.get('is_chaos_region', False)
+            effective_max = (max_per_region + 1) if is_chaos else max_per_region
+            if region_counts.get(region, 0) >= effective_max:
                 continue
-            
+
             region_counts[region] = region_counts.get(region, 0) + 1
             selected_upsets.append(upset)
     
@@ -1550,6 +1604,192 @@ def run_monte_carlo_evaluation(
 
 
 # ============================================================================
+# HIGH-PERFORMANCE MC EVALUATOR (shared sims + numpy + parallel pre-gen)
+# ============================================================================
+
+def _prebuild_sim_batch_worker(args: tuple) -> tuple[np.ndarray, np.ndarray]:
+    """ProcessPoolExecutor worker: generate one batch of tournament sims + opponent brackets.
+
+    Returns two numpy int16 arrays:
+      sim_batch  shape (batch_size, n_slots)
+      opp_batch  shape (batch_size, pool_size-1, n_slots)
+
+    Must be a module-level function (not a closure) so it is picklable.
+    """
+    (sim_id_start, sim_id_end, base_seed,
+     matchup_matrix, bracket_structure, ownership_profiles,
+     pool_size, team_idx, slot_id_to_idx, n_slots) = args
+
+    UNKNOWN = len(team_idx)  # sentinel: slot not filled / team not in index
+    batch_size = sim_id_end - sim_id_start
+    sim_batch = np.full((batch_size, n_slots), UNKNOWN, dtype=np.int16)
+    opp_batch = np.full((batch_size, pool_size - 1, n_slots), UNKNOWN, dtype=np.int16)
+
+    for local_i, sim_id in enumerate(range(sim_id_start, sim_id_end)):
+        rng = random.Random(base_seed + sim_id)
+        actual = simulate_tournament(matchup_matrix, bracket_structure, rng)
+        for slot_id, winner in actual.items():
+            idx = slot_id_to_idx.get(slot_id)
+            if idx is not None:
+                sim_batch[local_i, idx] = team_idx.get(winner, UNKNOWN)
+
+        for opp_id in range(pool_size - 1):
+            opp_rng = random.Random(base_seed + sim_id * 1000 + opp_id)
+            opp_picks = generate_opponent_bracket(
+                ownership_profiles, bracket_structure, matchup_matrix, opp_rng
+            )
+            for slot_id, team in opp_picks.items():
+                idx = slot_id_to_idx.get(slot_id)
+                if idx is not None:
+                    opp_batch[local_i, opp_id, idx] = team_idx.get(team, UNKNOWN)
+
+    return sim_batch, opp_batch
+
+
+def _score_bracket_numpy(
+    picks_arr: np.ndarray,
+    sim_matrix: np.ndarray,
+    opp_matrix: np.ndarray,
+    scoring_arr: np.ndarray,
+    slot_rounds_arr: np.ndarray,
+) -> tuple[float, float, float, float]:
+    """Score one bracket against pre-generated simulation data using numpy ops.
+
+    Args:
+        picks_arr:      (n_slots,) int16 — our picks as team indices
+        sim_matrix:     (sim_count, n_slots) int16 — tournament outcomes
+        opp_matrix:     (sim_count, pool_size-1, n_slots) int16 — opponent picks
+        scoring_arr:    (6,) int32 — points per round (0-indexed)
+        slot_rounds_arr:(n_slots,) int32 — round index (0-based) per slot
+
+    Returns:
+        (p_first_place, p_top_three, expected_finish, expected_score)
+    """
+    weights = scoring_arr[slot_rounds_arr]          # (n_slots,)
+
+    # Our score per simulation
+    correct = picks_arr == sim_matrix               # (sim_count, n_slots) bool
+    our_scores = (correct * weights).sum(axis=1)    # (sim_count,)
+
+    # Opponent scores per simulation
+    # Broadcasting: sim_matrix[:, None, :] → (sim_count, 1, n_slots)
+    opp_correct = opp_matrix == sim_matrix[:, np.newaxis, :]   # (sim_count, opp, n_slots)
+    opp_scores = (opp_correct * weights).sum(axis=2)            # (sim_count, opp)
+
+    # Rank: number of opponents strictly better than us + 1
+    ranks = (opp_scores > our_scores[:, np.newaxis]).sum(axis=1) + 1  # (sim_count,)
+
+    return (
+        float((ranks == 1).mean()),
+        float((ranks <= 3).mean()),
+        float(ranks.mean()),
+        float(our_scores.mean()),
+    )
+
+
+def evaluate_all_brackets_shared_sims(
+    brackets: list[CompleteBracket],
+    matchup_matrix: dict[str, dict[str, float]],
+    ownership_profiles: list[OwnershipProfile],
+    bracket_structure: BracketStructure,
+    pool_size: int,
+    scoring: list[int],
+    sim_count: int = 10000,
+    base_seed: int = 42,
+    n_workers: int | None = None,
+) -> None:
+    """Evaluate all brackets with three combined performance improvements:
+
+    Priority 1 — Shared simulations: pre-generate sim_count tournament outcomes
+      and opponent brackets ONCE, shared across all brackets instead of per-bracket.
+
+    Priority 2 — Parallel pre-generation: split the sim_count sims across
+      n_workers ProcessPoolExecutor workers to cut pre-gen time by ~Nx.
+
+    Priority 3 — Numpy vectorized scoring: score all brackets with array ops
+      instead of Python loops (~10-50× faster than the original inner loop).
+
+    Results are written in-place to each bracket's p_first_place / p_top_three /
+    expected_finish / expected_score fields.  Seeding is identical to
+    run_monte_carlo_evaluation(), so P(1st) values are numerically equivalent.
+    """
+    n_cpus = os.cpu_count() or 4
+    if n_workers is None:
+        n_workers = min(n_cpus, sim_count)
+    n_workers = max(1, n_workers)
+
+    logger.info(
+        f"=== COMPONENT 5 (shared sims): {sim_count} sims × {len(brackets)} brackets "
+        f"| {n_workers} pre-gen workers | numpy scoring ==="
+    )
+
+    # ---- build encoding tables ----
+    all_teams = sorted(set(p.team for p in ownership_profiles))
+    team_idx: dict[str, int] = {t: i for i, t in enumerate(all_teams)}
+    UNKNOWN = len(all_teams)   # sentinel for unrecognised teams (never matches valid idx)
+
+    # Only score round > 0 slots (skip play-in)
+    scored_slots = sorted(
+        [s for s in bracket_structure.slots if s.round_num > 0],
+        key=lambda s: s.slot_id,
+    )
+    slot_id_to_idx: dict[int, int] = {s.slot_id: i for i, s in enumerate(scored_slots)}
+    n_slots = len(scored_slots)
+    slot_rounds_arr = np.array([s.round_num - 1 for s in scored_slots], dtype=np.int32)
+    scoring_arr = np.array(scoring, dtype=np.int32)
+
+    # ---- Phase A: parallel pre-generation of sim batches ----
+    batch_size = max(1, (sim_count + n_workers - 1) // n_workers)
+    batches: list[tuple[int, int]] = []
+    for i in range(n_workers):
+        start = i * batch_size
+        end = min(start + batch_size, sim_count)
+        if start < end:
+            batches.append((start, end))
+
+    worker_args = [
+        (s, e, base_seed, matchup_matrix, bracket_structure,
+         ownership_profiles, pool_size, team_idx, slot_id_to_idx, n_slots)
+        for s, e in batches
+    ]
+
+    logger.info(f"Pre-generating: {len(batches)} batch(es) of ~{batch_size} sims each")
+    with ProcessPoolExecutor(max_workers=len(batches)) as executor:
+        batch_results = list(executor.map(_prebuild_sim_batch_worker, worker_args))
+
+    sim_matrix = np.concatenate([br[0] for br in batch_results], axis=0)  # (sim_count, n_slots)
+    opp_matrix = np.concatenate([br[1] for br in batch_results], axis=0)  # (sim_count, opp, n_slots)
+    logger.info(
+        f"Pre-generation done. "
+        f"sim_matrix={sim_matrix.shape}, opp_matrix={opp_matrix.shape} "
+        f"({(sim_matrix.nbytes + opp_matrix.nbytes) / 1e6:.1f} MB)"
+    )
+
+    # ---- Phase B: numpy vectorized scoring (single-threaded, very fast) ----
+    logger.info(f"Scoring {len(brackets)} brackets with numpy...")
+    for cb in brackets:
+        picks_arr = np.full(n_slots, UNKNOWN, dtype=np.int16)
+        for pick in cb.picks:
+            idx = slot_id_to_idx.get(pick.slot_id)
+            if idx is not None:
+                picks_arr[idx] = team_idx.get(pick.winner, UNKNOWN)
+
+        p_first, p_top3, exp_finish, exp_score = _score_bracket_numpy(
+            picks_arr, sim_matrix, opp_matrix, scoring_arr, slot_rounds_arr
+        )
+        cb.p_first_place = p_first
+        cb.p_top_three = p_top3
+        cb.expected_finish = exp_finish
+        cb.expected_score = exp_score
+        logger.info(
+            f"  {cb.label}: P(1st)={p_first:.1%}, P(top3)={p_top3:.1%}, "
+            f"E[finish]={exp_finish:.1f}, E[score]={exp_score:.1f}"
+        )
+
+    logger.info("Shared-sim evaluation complete.")
+
+
+# ============================================================================
 # COMPONENT 7: OUTPUT SELECTION
 # ============================================================================
 
@@ -1703,35 +1943,38 @@ def count_different_picks(bracket_a: CompleteBracket, bracket_b: CompleteBracket
 # TOP-LEVEL ORCHESTRATOR
 # ============================================================================
 
-def optimize_bracket(teams: list[Team], 
-                    matchup_matrix: dict[str, dict[str, float]], 
-                    ownership_profiles: list[OwnershipProfile], 
-                    bracket: BracketStructure, 
+def optimize_bracket(teams: list[Team],
+                    matchup_matrix: dict[str, dict[str, float]],
+                    ownership_profiles: list[OwnershipProfile],
+                    bracket: BracketStructure,
                     config) -> list[CompleteBracket]:
-    """Full optimization pipeline - generates ~72 scenarios across top 12 champions, returns 3 optimized brackets."""
-    logger.info("=== Starting bracket optimization (V2) ===")
-    
+    """Full optimization pipeline — generates ~600 scenarios across top 12 champions,
+    evaluates all with shared-sim Monte Carlo (parallel pre-gen + numpy scoring),
+    and returns all evaluated brackets (top 3 tagged optimal/safe/aggressive).
+    """
+    logger.info("=== Starting bracket optimization (V2 + high-perf MC) ===")
+
     # Handle config attributes with defaults for backward compatibility
     pool_size = getattr(config, 'pool_size', 25)
     sim_count = getattr(config, 'sim_count', 10000)
     base_seed = getattr(config, 'random_seed', 42) or 42
     scoring = getattr(config, 'scoring', [10, 20, 40, 80, 160, 320])
-    
+
     logger.info(f"Pool size: {pool_size}, Sim count: {sim_count}")
-    
+
     # COMPONENT 1: Evaluate champion candidates
     champion_candidates = evaluate_champions(
         teams, matchup_matrix, ownership_profiles, bracket,
         pool_size, sim_count=10000, base_seed=base_seed
     )
-    
-    # COMPONENT 2: Generate scenarios
+
+    # COMPONENT 2: Generate ~600 scenarios
     scenarios = generate_scenarios(
         champion_candidates, teams, matchup_matrix, ownership_profiles,
         bracket, pool_size
     )
-    
-    # COMPONENT 3: Construct brackets from scenarios (with EMV upsets!)
+
+    # COMPONENT 3: Construct brackets from scenarios (with EMV upsets)
     brackets = []
     for scenario in scenarios:
         bracket_obj = construct_bracket_from_scenario(
@@ -1739,7 +1982,7 @@ def optimize_bracket(teams: list[Team],
             bracket, pool_size, scoring
         )
         brackets.append(bracket_obj)
-    
+
     logger.info(f"Constructed {len(brackets)} scenario-based brackets")
 
     # COMPONENT 3.5: Inject 3 deterministic reference brackets
@@ -1763,16 +2006,32 @@ def optimize_bracket(teams: list[Team],
         )
         brackets.append(ref_bracket)
 
-    logger.info(f"Reference brackets added. Total: {len(brackets)} brackets before Monte Carlo.")
+    logger.info(f"Reference brackets added. Total: {len(brackets)} brackets before dedup.")
 
-    # COMPONENT 5: Monte Carlo evaluation for each bracket
-    logger.info("=== COMPONENT 5: Monte Carlo evaluation ===")
-    for bracket_obj in brackets:
-        run_monte_carlo_evaluation(
-            bracket_obj, matchup_matrix, ownership_profiles,
-            bracket, pool_size, scoring, sim_count, base_seed
-        )
-    
+    # Deduplicate brackets by exact picks content before expensive MC evaluation.
+    # Different scenario parameters (chaos-region pairs, cinderella variants) often
+    # construct to identical picks when the cinderella doesn't pass EMV or the
+    # chaos_regions don't change the top FF teams.
+    seen_picks_hashes: set[int] = set()
+    unique_brackets: list[CompleteBracket] = []
+    for b in brackets:
+        h = hash(tuple(sorted((p.slot_id, p.winner) for p in b.picks)))
+        if h not in seen_picks_hashes:
+            seen_picks_hashes.add(h)
+            unique_brackets.append(b)
+    n_deduped = len(brackets) - len(unique_brackets)
+    brackets = unique_brackets
+    logger.info(
+        f"Deduplication: removed {n_deduped} identical brackets "
+        f"({len(brackets)} unique remain before MC)."
+    )
+
+    # COMPONENT 5: Shared-sim Monte Carlo evaluation (Priority 1+2+3)
+    evaluate_all_brackets_shared_sims(
+        brackets, matchup_matrix, ownership_profiles,
+        bracket, pool_size, scoring, sim_count, base_seed
+    )
+
     # Sort all brackets by P(1st) descending
     brackets.sort(key=lambda b: b.p_first_place, reverse=True)
 
