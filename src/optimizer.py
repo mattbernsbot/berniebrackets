@@ -126,62 +126,83 @@ def evaluate_bracket_in_pool(our_picks: dict[int, str],
     return our_score, our_rank
 
 
-def generate_opponent_bracket(ownership_profiles: list[OwnershipProfile], 
-                              bracket: BracketStructure, 
-                              matchup_matrix: dict[str, dict[str, float]], 
+def generate_opponent_bracket(ownership_profiles: list[OwnershipProfile],
+                              bracket: BracketStructure,
+                              matchup_matrix: dict[str, dict[str, float]],
                               rng: random.Random) -> dict[int, str]:
-    """Generate one simulated opponent bracket using ownership distributions."""
+    """Generate one simulated opponent bracket using ownership distributions.
+
+    Top-down approach: sample champion from title_ownership, lock their full
+    path (R1→Championship), then fill remaining games bottom-up using
+    round-specific ownership percentages.
+    """
     picks = {}
     ownership_map = {p.team: p for p in ownership_profiles}
-    
-    # Pick champion first (weighted by title ownership)
+
+    # Phase 1: Sample champion from title ownership
     champions = [(p.team, p.title_ownership) for p in ownership_profiles if p.title_ownership > 0.001]
     if not champions:
         champions = [(p.team, 0.25) for p in ownership_profiles if p.seed == 1]
-    
+
     total_weight = sum(w for _, w in champions)
     r = rng.random() * total_weight
     cumulative = 0
     champion = champions[0][0]
-    
+
     for team, weight in champions:
         cumulative += weight
         if r <= cumulative:
             champion = team
             break
-    
-    # Fill R1 games based on ownership
+
+    # Phase 2: Lock the champion's path through the bracket
+    champion_path_set = set(find_champion_path(champion, bracket))
+
+    # Phase 3: Fill all slots round by round
+    # Rounds 0 and 1 (play-in and R64)
     for slot in bracket.slots:
-        if slot.round_num in [0, 1] and slot.team_a and slot.team_b:
-            team_a_profile = ownership_map.get(slot.team_a)
-            team_b_profile = ownership_map.get(slot.team_b)
-            
-            if team_a_profile and team_b_profile:
-                default_a = SEED_OWNERSHIP_CURVES.get(team_a_profile.seed, {}).get(2, 0.5)
-                default_b = SEED_OWNERSHIP_CURVES.get(team_b_profile.seed, {}).get(2, 0.5)
-                weight_a = team_a_profile.round_ownership.get(2, default_a)
-                weight_b = team_b_profile.round_ownership.get(2, default_b)
-                
-                total = weight_a + weight_b
-                if total > 0 and rng.random() < (weight_a / total):
-                    picks[slot.slot_id] = slot.team_a
-                else:
-                    picks[slot.slot_id] = slot.team_b
+        if slot.round_num not in [0, 1]:
+            continue
+        if not (slot.team_a and slot.team_b):
+            continue
+
+        if slot.slot_id in champion_path_set:
+            picks[slot.slot_id] = champion
+            continue
+
+        team_a_profile = ownership_map.get(slot.team_a)
+        team_b_profile = ownership_map.get(slot.team_b)
+
+        if team_a_profile and team_b_profile:
+            default_a = SEED_OWNERSHIP_CURVES.get(team_a_profile.seed, {}).get(2, 0.5)
+            default_b = SEED_OWNERSHIP_CURVES.get(team_b_profile.seed, {}).get(2, 0.5)
+            weight_a = team_a_profile.round_ownership.get(2, default_a)
+            weight_b = team_b_profile.round_ownership.get(2, default_b)
+
+            total = weight_a + weight_b
+            if total > 0 and rng.random() < (weight_a / total):
+                picks[slot.slot_id] = slot.team_a
             else:
-                picks[slot.slot_id] = slot.team_a if slot.seed_a < slot.seed_b else slot.team_b
-    
-    # Simulate remaining rounds
+                picks[slot.slot_id] = slot.team_b
+        else:
+            picks[slot.slot_id] = slot.team_a if slot.seed_a < slot.seed_b else slot.team_b
+
+    # Rounds 2-6
     slots_by_round = {}
     for slot in bracket.slots:
         if slot.round_num not in slots_by_round:
             slots_by_round[slot.round_num] = []
         slots_by_round[slot.round_num].append(slot)
-    
+
     for round_num in range(2, 7):
         if round_num not in slots_by_round:
             continue
-        
+
         for slot in slots_by_round[round_num]:
+            if slot.slot_id in champion_path_set:
+                picks[slot.slot_id] = champion
+                continue
+
             team_a = team_b = None
             for prev_slot in bracket.slots:
                 if prev_slot.feeds_into == slot.slot_id and prev_slot.slot_id in picks:
@@ -189,11 +210,11 @@ def generate_opponent_bracket(ownership_profiles: list[OwnershipProfile],
                         team_a = picks[prev_slot.slot_id]
                     else:
                         team_b = picks[prev_slot.slot_id]
-            
+
             if team_a and team_b:
                 team_a_profile = ownership_map.get(team_a)
                 team_b_profile = ownership_map.get(team_b)
-                
+
                 if team_a_profile and team_b_profile:
                     next_round = min(round_num + 1, 6)
                     default_a = SEED_OWNERSHIP_CURVES.get(team_a_profile.seed, {}).get(next_round, 0.5)
@@ -201,7 +222,7 @@ def generate_opponent_bracket(ownership_profiles: list[OwnershipProfile],
                     weight_a = team_a_profile.round_ownership.get(next_round, default_a)
                     weight_b = team_b_profile.round_ownership.get(next_round, default_b)
                     total = weight_a + weight_b
-                    
+
                     if total > 0 and rng.random() < (weight_a / total):
                         picks[slot.slot_id] = team_a
                     else:
@@ -209,7 +230,7 @@ def generate_opponent_bracket(ownership_profiles: list[OwnershipProfile],
                 else:
                     prob_a = matchup_matrix.get(team_a, {}).get(team_b, 0.5)
                     picks[slot.slot_id] = team_a if rng.random() < prob_a else team_b
-    
+
     return picks
 
 
@@ -255,6 +276,26 @@ def find_team_r1_slot(team_name: str, bracket: BracketStructure) -> BracketSlot 
             if slot.team_a == team_name or slot.team_b == team_name:
                 return slot
     return None
+
+
+def find_champion_path(champion_name: str, bracket: BracketStructure) -> list[int]:
+    """Return ordered slot_ids (R1 through Championship) that the champion must win.
+
+    Follows the feeds_into chain from the team's R1 slot up to the championship
+    (feeds_into == 0). Returns an empty list if the team has no R1 slot.
+    """
+    r1_slot = find_team_r1_slot(champion_name, bracket)
+    if r1_slot is None:
+        return []
+    slot_map = {s.slot_id: s for s in bracket.slots}
+    path = [r1_slot.slot_id]
+    current = r1_slot
+    while current.feeds_into:
+        current = slot_map.get(current.feeds_into)
+        if current is None:
+            break
+        path.append(current.slot_id)
+    return path
 
 
 def find_most_likely_opponent_in_sub_bracket(slot_id: int, 
