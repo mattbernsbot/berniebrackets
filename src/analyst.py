@@ -501,6 +501,7 @@ def generate_bracket_html(brackets: list[CompleteBracket],
         "adj_em": round(t.adj_em, 1),
         "adj_o": round(t.adj_o, 1),
         "adj_d": round(t.adj_d, 1),
+        "adj_t": round(t.adj_t, 1) if t.adj_t else None,
         "record": f"{t.wins}-{t.losses}",
         "conference": t.conference or "",
         "barthag": round(t.barthag, 3) if t.barthag else None,
@@ -529,12 +530,22 @@ def generate_bracket_html(brackets: list[CompleteBracket],
                 if team_b in bracket_teams
             }
 
+    # Fetch model internals for client-side prediction in the Model modal
+    model_data = {}
+    try:
+        from upset_model.predict import UpsetPredictor
+        _p = UpsetPredictor()
+        model_data = _p.get_model_internals()
+    except Exception:
+        pass  # graceful degradation — modal shows static text only
+
     html = _HTML_TEMPLATE
     html = html.replace("__BRACKET_DATA__", json.dumps(bracket_data))
     html = html.replace("__STRUCTURE_DATA__", json.dumps(structure_data))
     html = html.replace("__TEAM_DATA__", json.dumps(team_data))
     html = html.replace("__OWNERSHIP_DATA__", json.dumps(ownership_data))
     html = html.replace("__MATCHUP_DATA__", json.dumps(matchup_data))
+    html = html.replace("__MODEL_DATA__", json.dumps(model_data))
 
     return html
 
@@ -671,6 +682,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <select id="bracket-selector"></select>
   <div class="header-spacer"></div>
   <button class="glossary-btn" onclick="document.getElementById('methodology-modal').classList.add('open')">Methodology</button>
+  <button class="glossary-btn" onclick="document.getElementById('model-modal').classList.add('open')">Model</button>
   <button class="glossary-btn" onclick="document.getElementById('glossary-modal').classList.add('open')">Glossary</button>
 </div>
 
@@ -796,12 +808,43 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   </div>
 </div>
 
+<!-- Model Modal -->
+<div class="modal-overlay" id="model-modal">
+  <div class="modal-backdrop" onclick="document.getElementById('model-modal').classList.remove('open')"></div>
+  <div class="modal-content" style="max-width:720px;">
+    <button class="modal-close" onclick="document.getElementById('model-modal').classList.remove('open')">&times;</button>
+    <h2>Upset Prediction Model</h2>
+
+    <div class="gloss-item">
+      <span class="gloss-term">Performance</span>
+      <div class="gloss-def" id="model-perf-stats" style="line-height:1.6;"></div>
+    </div>
+    <div id="model-auc-chart" style="margin:12px 0 20px;"></div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">Match Predictor</span>
+      <div class="gloss-def">Select any two tournament teams to see the model&rsquo;s predicted win probability and the per-feature breakdown driving it.</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:12px 0 0;">
+      <select id="model-team-a" style="flex:1;background:#16213e;color:#fff;border:1px solid #444;border-radius:6px;padding:7px 10px;font-size:13px;"></select>
+      <span style="color:#666;font-size:16px;font-weight:300;flex-shrink:0;">vs.</span>
+      <select id="model-team-b" style="flex:1;background:#16213e;color:#fff;border:1px solid #444;border-radius:6px;padding:7px 10px;font-size:13px;"></select>
+    </div>
+
+    <div id="model-result" style="margin-top:12px;"></div>
+    <div id="model-features" style="margin-top:4px;"></div>
+
+  </div>
+</div>
+
 <script>
 const BRACKETS = __BRACKET_DATA__;
 const SLOTS = __STRUCTURE_DATA__;
 const TEAMS = __TEAM_DATA__;
 const OWNERSHIP = __OWNERSHIP_DATA__;
 const MATCHUPS = __MATCHUP_DATA__;
+const MODEL_DATA = __MODEL_DATA__;
 
 let currentPicks = null; // track current bracket's picks for detail panel
 
@@ -1112,9 +1155,264 @@ function renderBracket(index) {
   renderCenter(document.getElementById('center'), currentPicks, champPath, bracket);
 }
 
+// ── Model Modal ──
+
+const FEATURE_LABELS = {
+  seed_diff:          'Seed Advantage',
+  adj_em_diff:        'AdjEM Gap (KenPom)',
+  adj_o_diff:         'Offensive Efficiency',
+  adj_t_diff:         'Tempo Differential',
+  seed_x_adj_em:      'Seed \u00d7 AdjEM Interaction',
+  top25_winpct_diff:  'Top-25 Win% Edge',
+  dog_top25_winpct:   'Underdog Top-25 Record',
+  barthag_diff:       'Barthag (Win Prob) Gap',
+  wab_diff:           'Wins Above Bubble',
+  momentum_diff:      'Momentum Differential',
+  dog_momentum:       'Underdog Momentum',
+  dog_last10_winpct:  'Underdog Last-10 Win%',
+  spread:             'Vegas Spread',
+  spread_vs_expected: 'Spread vs. Expected',
+};
+
+function initModelModal() {
+  renderAucChart();
+  populateTeamSelectors();
+}
+
+function renderAucChart() {
+  const container = document.getElementById('model-auc-chart');
+  const perfEl    = document.getElementById('model-perf-stats');
+  if (!MODEL_DATA || !MODEL_DATA.model_auc) {
+    if (perfEl) perfEl.innerHTML = 'Model not available &mdash; run <code>python upset_model/train_sklearn.py</code> to enable.';
+    if (container) container.innerHTML = '';
+    return;
+  }
+
+  const n       = MODEL_DATA.training_n || 0;
+  const nu      = MODEL_DATA.n_upsets   || 0;
+  const years   = MODEL_DATA.years || [];
+  const yearStr = years.length > 1 ? years[0] + '\u2013' + years[years.length - 1] : (years[0] || '');
+  const nf      = (MODEL_DATA.feature_names || []).length;
+  if (perfEl) perfEl.innerHTML =
+    'Logistic Regression with isotonic calibration. Trained on <b>' + n +
+    ' NCAA tournament games</b> (' + yearStr + '), ' + nu + ' upsets (' +
+    Math.round(100 * nu / n) + '%). ' + nf +
+    ' features selected via L1 (Lasso) screening from 14 candidates. ' +
+    'Cross-validated via Leave-One-Year-Out (LOGO) methodology.';
+
+  const bars = [
+    { label: 'Seed Only',               auc: MODEL_DATA.baseline_auc,    color: '#4a5568' },
+    MODEL_DATA.seed_kenpom_auc != null
+      ? { label: 'Seed + KenPom AdjEM', auc: MODEL_DATA.seed_kenpom_auc, color: '#2d6a9f' }
+      : null,
+    { label: 'Full Model (' + nf + ' features)', auc: MODEL_DATA.model_auc, color: 'var(--accent)' },
+  ].filter(Boolean);
+
+  const baseline = bars[0].auc;
+  const maxAuc   = Math.max(...bars.map(b => b.auc));
+  const minAuc   = 0.5;
+  const range    = maxAuc - minAuc;
+
+  let html = '<div style="font-size:11px;color:#8899aa;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">AUC \u2014 Area Under ROC Curve (Leave-One-Year-Out CV)</div>';
+  for (const bar of bars) {
+    const pct  = range > 0 ? ((bar.auc - minAuc) / range * 78).toFixed(1) : '40';
+    const lift = bar.auc > baseline
+      ? '+' + ((bar.auc / baseline - 1) * 100).toFixed(1) + '% lift'
+      : '';
+    html +=
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">' +
+        '<div style="width:190px;font-size:12px;color:#ccc;text-align:right;flex-shrink:0;">' + bar.label + '</div>' +
+        '<div style="flex:1;background:#0d1b2a;border-radius:4px;height:20px;overflow:hidden;">' +
+          '<div style="width:' + pct + '%;height:100%;background:' + bar.color + ';border-radius:4px;"></div>' +
+        '</div>' +
+        '<div style="width:46px;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">' + bar.auc.toFixed(3) + '</div>' +
+        '<div style="width:90px;font-size:11px;color:' + (lift ? '#4ade80' : '#666') + ';flex-shrink:0;">' + (lift || '(baseline)') + '</div>' +
+      '</div>';
+  }
+  if (MODEL_DATA.brier != null) {
+    html += '<div style="font-size:11px;color:#8899aa;margin-top:2px;">Brier score: ' + MODEL_DATA.brier.toFixed(4) + ' (calibration quality; lower is better)</div>';
+  }
+  container.innerHTML = html;
+}
+
+function populateTeamSelectors() {
+  const selA = document.getElementById('model-team-a');
+  const selB = document.getElementById('model-team-b');
+  if (!selA || !selB) return;
+
+  const sorted = Object.entries(TEAMS).sort((a, b) =>
+    a[1].seed !== b[1].seed ? a[1].seed - b[1].seed : a[0].localeCompare(b[0])
+  );
+
+  selA.innerHTML = '<option value="">— Pick Team —</option>';
+  selB.innerHTML = '<option value="">— Pick Team —</option>';
+  sorted.forEach(([name, d]) => {
+    const txt = '(' + d.seed + ') ' + name;
+    selA.appendChild(new Option(txt, name));
+    selB.appendChild(new Option(txt, name));
+  });
+
+  if (sorted.length >= 17) {
+    selA.value = sorted[0][0];
+    selB.value = sorted[16][0];
+  }
+  selA.addEventListener('change', updateModelPrediction);
+  selB.addEventListener('change', updateModelPrediction);
+  updateModelPrediction();
+}
+
+function safeTop25Pct(t) {
+  const w = t.top25_wins || 0, l = t.top25_losses || 0, g = w + l;
+  return g >= 4 ? w / g : 0.0;
+}
+
+function computeModelPrediction(aName, bName) {
+  const a = TEAMS[aName], b = TEAMS[bName];
+  if (!a || !b || !MODEL_DATA || !(MODEL_DATA.coefficients || []).length) return null;
+
+  const favIsA = a.seed <= b.seed;
+  const fav = favIsA ? a : b, dog = favIsA ? b : a;
+  const sd     = fav.seed  - dog.seed;
+  const aemDiff = (fav.adj_em || 0) - (dog.adj_em || 0);
+
+  const rawFeatures = {
+    seed_diff:          sd,
+    adj_em_diff:        aemDiff,
+    adj_o_diff:         (fav.adj_o || 0) - (dog.adj_o || 0),
+    adj_t_diff:         (fav.adj_t || 0) - (dog.adj_t || 0),
+    seed_x_adj_em:      sd * aemDiff,
+    top25_winpct_diff:  safeTop25Pct(fav) - safeTop25Pct(dog),
+    dog_top25_winpct:   safeTop25Pct(dog),
+    barthag_diff:       (fav.barthag || 0) - (dog.barthag || 0),
+    wab_diff:           (fav.wab || 0) - (dog.wab || 0),
+    momentum_diff:      0,
+    dog_momentum:       0,
+    dog_last10_winpct:  0.5,
+    spread:             0,
+    spread_vs_expected: 0,
+  };
+
+  const names = MODEL_DATA.feature_names;
+  const coefs = MODEL_DATA.coefficients;
+  const means = MODEL_DATA.scaler_mean;
+  const stds  = MODEL_DATA.scaler_std;
+
+  let logOdds = MODEL_DATA.intercept || 0;
+  const contributions = names.map((name, i) => {
+    const raw     = rawFeatures[name] !== undefined ? rawFeatures[name] : 0;
+    const scaled  = (stds[i] > 0) ? (raw - means[i]) / stds[i] : 0;
+    const contrib = coefs[i] * scaled;
+    logOdds += contrib;
+    return { name, raw, scaled, contrib };
+  });
+
+  const pUpset  = Math.max(0.01, Math.min(0.99, 1 / (1 + Math.exp(-logOdds))));
+  const pAWins  = favIsA ? 1 - pUpset : pUpset;
+  return { pAWins, pUpset, logOdds, contributions, favIsA,
+           favName: favIsA ? aName : bName, dogName: favIsA ? bName : aName };
+}
+
+function updateModelPrediction() {
+  const aName = (document.getElementById('model-team-a') || {}).value;
+  const bName = (document.getElementById('model-team-b') || {}).value;
+  const resultEl   = document.getElementById('model-result');
+  const featuresEl = document.getElementById('model-features');
+  if (!resultEl || !featuresEl) return;
+
+  if (!aName || !bName || aName === bName) {
+    resultEl.innerHTML   = '<div style="color:#888;font-size:12px;text-align:center;padding:16px;">Select two different teams above.</div>';
+    featuresEl.innerHTML = '';
+    return;
+  }
+
+  const r = computeModelPrediction(aName, bName);
+  if (!r) {
+    resultEl.innerHTML   = '<div style="color:#888;font-size:12px;padding:12px;">Model not available &mdash; run <code>python upset_model/train_sklearn.py</code> to enable.</div>';
+    featuresEl.innerHTML = '';
+    return;
+  }
+
+  const aData = TEAMS[aName], bData = TEAMS[bName];
+  const pctA  = (r.pAWins * 100).toFixed(1);
+  const pctB  = (100 - r.pAWins * 100).toFixed(1);
+  const colA  = r.pAWins >= 0.5 ? '#4ade80' : '#f87171';
+  const colB  = r.pAWins <  0.5 ? '#4ade80' : '#f87171';
+
+  resultEl.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;background:#16213e;border-radius:10px;padding:14px 20px;gap:0;">' +
+      '<div style="flex:1;text-align:right;">' +
+        '<div style="font-size:12px;color:#bbb;margin-bottom:3px;">(' + aData.seed + ') ' + aName + '</div>' +
+        '<div style="font-size:38px;font-weight:800;color:' + colA + ';line-height:1;">' + pctA + '%</div>' +
+        '<div style="font-size:11px;color:#8899aa;margin-top:3px;">' + (aData.conference || '') + ' &middot; ' + aData.record + '</div>' +
+      '</div>' +
+      '<div style="padding:0 22px;color:#555;font-size:18px;">vs</div>' +
+      '<div style="flex:1;text-align:left;">' +
+        '<div style="font-size:12px;color:#bbb;margin-bottom:3px;">(' + bData.seed + ') ' + bName + '</div>' +
+        '<div style="font-size:38px;font-weight:800;color:' + colB + ';line-height:1;">' + pctB + '%</div>' +
+        '<div style="font-size:11px;color:#8899aa;margin-top:3px;">' + (bData.conference || '') + ' &middot; ' + bData.record + '</div>' +
+      '</div>' +
+    '</div>';
+
+  renderFeatureContribs(r, aName, bName, featuresEl);
+}
+
+function renderFeatureContribs(r, aName, bName, container) {
+  const sign     = r.favIsA ? -1 : 1; // flip if A is favorite (upset goes against A)
+  const adjusted = r.contributions.map(c => ({ ...c, aContrib: c.contrib * sign }));
+  const maxAbs   = Math.max(...adjusted.map(c => Math.abs(c.contrib)), 0.01);
+
+  let html =
+    '<div style="font-size:11px;color:#8899aa;text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 4px;">' +
+      'Feature Contributions &mdash; pull toward <b style="color:#fff;">' + aName + '</b> winning' +
+    '</div>' +
+    '<div style="font-size:11px;color:#8899aa;margin-bottom:10px;">' +
+      (r.favIsA
+        ? aName + ' is the <b style="color:#ccc;">favorite</b>. Green bars push toward ' + aName + ' winning; red bars push toward ' + bName + ' winning.'
+        : aName + ' is the <b style="color:#ccc;">underdog</b>. Green bars push toward ' + aName + ' winning; red bars push toward ' + bName + ' winning.') +
+    '</div>';
+
+  const sorted = [...adjusted].sort((a, b) => Math.abs(b.contrib) - Math.abs(a.contrib));
+
+  html += '<div>';
+  for (const f of sorted) {
+    const barPct  = (Math.abs(f.contrib) / maxAbs * 44).toFixed(1);
+    const isGreen = f.aContrib >= 0;
+    const barCol  = isGreen ? '#4ade80' : '#f87171';
+    const label   = FEATURE_LABELS[f.name] || f.name;
+    const rawStr  = typeof f.raw === 'number'
+      ? (Math.abs(f.raw) < 0.005 ? '0.00' : (f.raw >= 0 ? '+' + f.raw.toFixed(2) : f.raw.toFixed(2)))
+      : '\u2014';
+    const cStr = (f.aContrib >= 0 ? '+' : '') + f.aContrib.toFixed(3);
+
+    html +=
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<div style="width:175px;font-size:11px;color:#ccc;text-align:right;flex-shrink:0;">' + label + '</div>' +
+        '<div style="width:48px;font-size:10px;color:#8899aa;text-align:right;flex-shrink:0;">' + rawStr + '</div>' +
+        '<div style="flex:1;position:relative;height:16px;">' +
+          '<div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:#2a3a4a;"></div>' +
+          (isGreen
+            ? '<div style="position:absolute;left:50%;top:2px;width:' + barPct + '%;height:12px;background:' + barCol + ';border-radius:0 3px 3px 0;opacity:0.8;"></div>'
+            : '<div style="position:absolute;right:50%;top:2px;width:' + barPct + '%;height:12px;background:' + barCol + ';border-radius:3px 0 0 3px;opacity:0.8;"></div>') +
+        '</div>' +
+        '<div style="width:55px;font-size:10px;color:' + barCol + ';flex-shrink:0;">' + cStr + '</div>' +
+      '</div>';
+  }
+  html += '</div>';
+
+  html +=
+    '<div style="font-size:11px;color:#8899aa;border-top:1px solid #1e2d3d;padding-top:8px;margin-top:8px;">' +
+      'Log-odds = ' + r.logOdds.toFixed(3) +
+      ' &rarr; P(upset) = ' + (r.pUpset * 100).toFixed(1) + '%' +
+      ' &rarr; P(' + aName + ' wins) = <b style="color:#fff;">' + (r.pAWins * 100).toFixed(1) + '%</b>' +
+    '</div>';
+
+  container.innerHTML = html;
+}
+
 // ── Init ──
 populateSelector();
 renderBracket(0);
+initModelModal();
 </script>
 </body>
 </html>

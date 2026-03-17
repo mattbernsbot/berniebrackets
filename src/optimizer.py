@@ -20,6 +20,7 @@ from src.constants import (
     UPSET_ADVANCEMENT_RATE, SEED_OWNERSHIP_CURVES,
     HISTORICAL_SEED_WIN_RATES
 )
+from src.sharp import adj_em_to_win_prob
 
 logger = logging.getLogger("bracket_optimizer")
 
@@ -526,6 +527,128 @@ def _create_simple_chalk_bracket(teams: list[Team],
         p_first_place=0.0,
         p_top_three=0.0,
         expected_finish=0.0
+    )
+
+
+def construct_deterministic_bracket(
+    label: str,
+    prob_fn,  # callable(team_a_name: str, team_b_name: str) -> float P(A beats B)
+    bracket: BracketStructure,
+    teams: list[Team],
+    ownership_profiles: list[OwnershipProfile],
+) -> CompleteBracket:
+    """Build a bracket by always picking the highest-probability team in every game.
+
+    prob_fn(a, b) should return P(a beats b). Winner is always the team with prob >= 0.5.
+    No EMV, no chaos, no cinderella — pure deterministic chalk using the given probability source.
+    Used to inject CHALK, KP_CHALK, and BERNS_CHALK reference brackets.
+    """
+    team_map = {t.name: t for t in teams}
+    ownership_map = {p.team: p for p in ownership_profiles} if ownership_profiles else {}
+
+    # Build feeder_map: target_slot_id -> [source_slot_id, source_slot_id]
+    feeder_map: dict[int, list[int]] = {}
+    for slot in bracket.slots:
+        if slot.feeds_into:
+            feeder_map.setdefault(slot.feeds_into, []).append(slot.slot_id)
+
+    # Walk rounds in order, filling picks deterministically
+    picks_dict: dict[int, str] = {}  # slot_id -> winner_name
+    slots_by_round: dict[int, list] = {}
+    for slot in bracket.slots:
+        slots_by_round.setdefault(slot.round_num, []).append(slot)
+
+    for round_num in sorted(slots_by_round.keys()):
+        for slot in slots_by_round[round_num]:
+            if round_num <= 1:
+                team_a, team_b = slot.team_a, slot.team_b
+            else:
+                feeders = feeder_map.get(slot.slot_id, [])
+                if len(feeders) < 2:
+                    continue
+                team_a = picks_dict.get(feeders[0])
+                team_b = picks_dict.get(feeders[1])
+
+            if not team_a or not team_b:
+                continue
+
+            try:
+                prob_a = prob_fn(team_a, team_b)
+            except (KeyError, AttributeError):
+                prob_a = 0.5
+            winner = team_a if prob_a >= 0.5 else team_b
+            picks_dict[slot.slot_id] = winner
+
+    # Build BracketPick list (skip round 0 play-in)
+    picks = []
+    for slot in bracket.slots:
+        winner = picks_dict.get(slot.slot_id)
+        if not winner or slot.round_num == 0:
+            continue
+
+        # Determine opponent to check is_upset
+        if slot.round_num == 1:
+            loser = slot.team_b if winner == slot.team_a else slot.team_a
+        else:
+            feeders = feeder_map.get(slot.slot_id, [])
+            loser = next(
+                (picks_dict.get(fid) for fid in feeders if picks_dict.get(fid) != winner),
+                None
+            )
+
+        winner_team = team_map.get(winner)
+        loser_team = team_map.get(loser) if loser else None
+        is_upset = bool(
+            winner_team and loser_team and winner_team.seed > loser_team.seed
+        )
+
+        # Win probability for confidence tier
+        try:
+            win_prob = prob_fn(winner, loser) if loser else 0.5
+        except (KeyError, AttributeError):
+            win_prob = 0.5
+
+        leverage_score = 1.0
+        if winner in ownership_map:
+            leverage_score = ownership_map[winner].leverage_by_round.get(slot.round_num, 1.0)
+
+        picks.append(BracketPick(
+            slot_id=slot.slot_id,
+            round_num=slot.round_num,
+            winner=winner,
+            confidence=assign_confidence_tier(win_prob),
+            leverage_score=leverage_score,
+            is_upset=is_upset,
+        ))
+
+    max_round = max((s.round_num for s in bracket.slots), default=1)
+    championship_slot = next((s for s in bracket.slots if s.round_num == max_round), None)
+    champion = picks_dict.get(championship_slot.slot_id) if championship_slot else "Unknown"
+
+    final_four = []
+    if max_round >= 5:
+        ff_slots = [s for s in bracket.slots if s.round_num == max_round - 2]
+        final_four = [picks_dict.get(s.slot_id) for s in ff_slots if picks_dict.get(s.slot_id)]
+
+    elite_eight = []
+    if max_round >= 4:
+        e8_slots = [s for s in bracket.slots if s.round_num == max_round - 3]
+        elite_eight = [picks_dict.get(s.slot_id) for s in e8_slots if picks_dict.get(s.slot_id)]
+
+    logger.info(
+        f"  Deterministic bracket [{label}]: champion={champion}, "
+        f"upsets={sum(1 for p in picks if p.is_upset)}"
+    )
+    return CompleteBracket(
+        picks=picks,
+        champion=champion,
+        final_four=final_four,
+        elite_eight=elite_eight,
+        label=label,
+        expected_score=0.0,
+        p_first_place=0.0,
+        p_top_three=0.0,
+        expected_finish=0.0,
     )
 
 
@@ -1618,7 +1741,30 @@ def optimize_bracket(teams: list[Team],
         brackets.append(bracket_obj)
     
     logger.info(f"Constructed {len(brackets)} scenario-based brackets")
-    
+
+    # COMPONENT 3.5: Inject 3 deterministic reference brackets
+    logger.info("=== COMPONENT 3.5: Injecting reference brackets (CHALK / KP_CHALK / BERNS_CHALK) ===")
+    _team_map_ref = {t.name: t for t in teams}
+
+    def _chalk_prob(a, b):
+        ta, tb = _team_map_ref[a], _team_map_ref[b]
+        return 1.0 if ta.seed < tb.seed else (0.0 if ta.seed > tb.seed else 0.5)
+
+    def _kp_prob(a, b):
+        ta, tb = _team_map_ref[a], _team_map_ref[b]
+        return adj_em_to_win_prob(ta.adj_em, tb.adj_em)
+
+    def _model_prob(a, b):
+        return matchup_matrix.get(a, {}).get(b, 0.5)
+
+    for ref_label, pfn in [("CHALK", _chalk_prob), ("KP_CHALK", _kp_prob), ("BERNS_CHALK", _model_prob)]:
+        ref_bracket = construct_deterministic_bracket(
+            ref_label, pfn, bracket, teams, ownership_profiles
+        )
+        brackets.append(ref_bracket)
+
+    logger.info(f"Reference brackets added. Total: {len(brackets)} brackets before Monte Carlo.")
+
     # COMPONENT 5: Monte Carlo evaluation for each bracket
     logger.info("=== COMPONENT 5: Monte Carlo evaluation ===")
     for bracket_obj in brackets:

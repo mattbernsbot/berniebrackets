@@ -188,3 +188,24 @@ class UpsetPredictor:
             "feature_names": self.model_package.get('feature_names', []),
             "model_path": self.model_path
         }
+
+    def get_model_internals(self) -> dict:
+        """Return data needed for client-side prediction and visualization in HTML output."""
+        pkg = self.model_package
+        lr = pkg.get('logistic_uncalibrated')
+        scaler = pkg.get('scaler')
+        cv = pkg.get('cv_results', {})
+        return {
+            'feature_names': pkg.get('feature_names', []),
+            'coefficients': lr.coef_[0].tolist() if lr is not None else [],
+            'intercept': float(lr.intercept_[0]) if lr is not None else 0.0,
+            'scaler_mean': scaler.mean_.tolist() if scaler is not None else [],
+            'scaler_std': scaler.scale_.tolist() if scaler is not None else [],
+            'baseline_auc': cv.get('baseline_auc'),
+            'seed_kenpom_auc': cv.get('seed_kenpom_auc'),
+            'model_auc': cv.get('best_auc'),
+            'brier': cv.get('best_brier'),
+            'training_n': pkg.get('training_n'),
+            'n_upsets': pkg.get('n_upsets'),
+            'years': pkg.get('years', []),
+        }

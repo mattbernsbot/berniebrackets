@@ -420,20 +420,44 @@ def seed_baseline_auc(X, y, groups):
     logo = LeaveOneGroupOut()
     y_pred = []
     y_true = []
-    
+
     for train_idx, test_idx in logo.split(X, y, groups):
         X_test = X[test_idx]
         y_test = y[test_idx]
-        
+
         # seed_diff is first feature
         # Higher seed_diff = bigger underdog = lower P(upset)
         # We want P(upset), so use sigmoid(-seed_diff)
         seed_diff = X_test[:, 0]
         p_upset = 1 / (1 + np.exp(0.3 * seed_diff))  # Simple logistic
-        
+
         y_pred.extend(p_upset)
         y_true.extend(y_test)
-    
+
+    return roc_auc_score(y_true, y_pred)
+
+
+def seed_kenpom_baseline_auc(X_2feat, y, groups):
+    """Compute AUC for seed+KenPom (adj_em_diff) 2-feature baseline using LOGO-CV LR."""
+    logo = LeaveOneGroupOut()
+    y_pred = []
+    y_true = []
+
+    for train_idx, test_idx in logo.split(X_2feat, y, groups):
+        X_train, X_test = X_2feat[train_idx], X_2feat[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        sc = StandardScaler()
+        X_train_sc = sc.fit_transform(X_train)
+        X_test_sc = sc.transform(X_test)
+
+        lr = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
+        lr.fit(X_train_sc, y_train)
+        p_upset = lr.predict_proba(X_test_sc)[:, 1]
+
+        y_pred.extend(p_upset)
+        y_true.extend(y_test)
+
     return roc_auc_score(y_true, y_pred)
 
 
@@ -525,6 +549,9 @@ def train_and_evaluate():
         if abs(l1_coefs[i]) > 1e-6:
             surviving.append(i)
 
+    # Save full feature matrix before L1 selection (needed for intermediate baselines)
+    X_raw = X.copy()
+
     if len(surviving) < len(FEATURE_NAMES):
         dropped = [FEATURE_NAMES[i] for i in range(len(FEATURE_NAMES)) if i not in surviving]
         print(f"\nDropping {len(dropped)} features: {dropped}")
@@ -553,6 +580,14 @@ def train_and_evaluate():
     print("Computing seed-only baseline...")
     baseline_auc = seed_baseline_auc(X, y, groups)
     print(f"  Seed-only baseline:       AUC = {baseline_auc:.4f}")
+
+    # Seed + KenPom (adj_em_diff) baseline
+    print("Computing seed+KenPom baseline...")
+    seed_idx = FEATURE_NAMES.index('seed_diff')
+    aem_idx = FEATURE_NAMES.index('adj_em_diff')
+    X_seed_kenpom = X_raw[:, [seed_idx, aem_idx]]
+    seed_kenpom_auc = seed_kenpom_baseline_auc(X_seed_kenpom, y, groups)
+    print(f"  Seed+KenPom baseline:     AUC = {seed_kenpom_auc:.4f}")
 
     # LOO-CV with C grid search (inner CV selects C, outer evaluates)
     print(f"\nTesting C values: {C_VALUES}")
@@ -588,6 +623,7 @@ def train_and_evaluate():
     print(f"LOO-CV RESULTS — LR-only with C grid search:")
     print("="*80)
     print(f"  Seed-only:    AUC = {baseline_auc:.4f}")
+    print(f"  Seed+KenPom:  AUC = {seed_kenpom_auc:.4f}")
     for c_val in C_VALUES:
         marker = " <<<" if c_val == best_c else ""
         print(f"  LR (C={c_val:<5}): AUC = {auc_by_c[c_val]:.4f}{marker}")
@@ -641,6 +677,7 @@ def train_and_evaluate():
         'feature_indices': surviving if len(surviving) < len(FEATURE_NAMES) else list(range(len(FEATURE_NAMES))),
         'cv_results': {
             'baseline_auc': baseline_auc,
+            'seed_kenpom_auc': seed_kenpom_auc,
             'best_auc': best_auc,
             'best_brier': best_brier,
             'auc_by_c': {str(c): auc for c, auc in auc_by_c.items()},
