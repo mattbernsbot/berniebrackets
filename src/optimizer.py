@@ -413,8 +413,8 @@ def evaluate_champions(teams: list[Team],
         if not team:
             continue
 
-        # Only seeds 1-4 are realistic national champion contenders
-        if team.seed > 4:
+        # Seeds 1-6 are realistic national champion contenders
+        if team.seed > 6:
             continue
         
         profile = ownership_map.get(team_name)
@@ -440,8 +440,8 @@ def evaluate_champions(teams: list[Team],
     
     candidates.sort(key=lambda c: c.adjusted_value, reverse=True)
     
-    top_candidates = candidates[:12]
-    
+    top_candidates = candidates[:24]
+
     logger.info(f"Champion evaluation complete. Top {len(top_candidates)} candidates:")
     for i, cand in enumerate(top_candidates, 1):
         logger.info(f"  {i}. {cand.team_name} ({cand.seed}-seed): "
@@ -778,7 +778,7 @@ def select_cinderella(teams: list[Team],
     for team in teams:
         if team.region not in chaos_regions:
             continue
-        if team.seed < 10 or team.seed > 14:
+        if team.seed < 9 or team.seed > 14:
             continue
 
         r1_slot = find_team_r1_slot(team.name, bracket)
@@ -791,7 +791,7 @@ def select_cinderella(teams: list[Team],
             continue
 
         adjem_gap = abs(team.adj_em - opponent.adj_em)
-        if adjem_gap > 10:
+        if adjem_gap > 15:
             continue
 
         upset_prob = matchup_matrix.get(team.name, {}).get(opponent_name, 0.0)
@@ -855,7 +855,7 @@ def generate_scenarios(champion_candidates: list[ChampionCandidate],
         elif chaos_level == "medium":
             if len(other) >= 2:
                 pairs = list(_icombinations(other, 2))
-                return [list(p) for p in pairs[:2]]   # at most 2 pairs
+                return [list(p) for p in pairs]   # all C(3,2)=3 pairs
             return [other]
         else:  # high
             return [other]
@@ -873,7 +873,7 @@ def generate_scenarios(champion_candidates: list[ChampionCandidate],
         for region in non_champ_regions:
             ranked = select_regional_champion(
                 region, teams, matchup_matrix, ownership_profiles, bracket,
-                chaos_level, pool_size, top_k=3
+                chaos_level, pool_size, top_k=4
             )
             # top_k>1 always returns a list
             per_region[region] = ranked if isinstance(ranked, list) else [ranked]
@@ -903,12 +903,15 @@ def generate_scenarios(champion_candidates: list[ChampionCandidate],
     # ---- main loop ----
 
     _stype = {"low": "chalk", "medium": "contrarian", "high": "chaos"}
-    _max_ff = {"low": 6, "medium": 8, "high": 8}
+    _max_ff = {"low": 8, "medium": 12, "high": 12}
 
     for champ_cand in champion_candidates:
         other_regions = [r for r in regions if r != champ_cand.region]
 
         for chaos_level in ["low", "medium", "high"]:
+            # Seeds 5-6 only realistic in chaotic tournaments
+            if champ_cand.seed >= 5 and chaos_level == "low":
+                continue
             scenario_type = _stype[chaos_level]
             max_ff = _max_ff[chaos_level]
 
