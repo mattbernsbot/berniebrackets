@@ -582,6 +582,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .header-spacer { flex: 1; }
 .glossary-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #555; background: transparent; color: #ccc; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; }
 .glossary-btn:hover { background: #16213e; color: #fff; border-color: var(--accent); }
+.why-chalk-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #dc3545; background: #dc3545; color: #fff; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; font-weight: 600; }
+.why-chalk-btn:hover { background: #bb2d3b; border-color: #bb2d3b; }
 
 /* Stats bar */
 .stats-bar { background: #16213e; color: #e0e0e0; padding: 10px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; }
@@ -681,6 +683,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <h1>BernieBrackets</h1>
   <select id="bracket-selector"></select>
   <div class="header-spacer"></div>
+  <button class="why-chalk-btn" onclick="document.getElementById('why-chalk-modal').classList.add('open')">Why Perfect Loses?</button>
   <button class="glossary-btn" onclick="document.getElementById('methodology-modal').classList.add('open')">Methodology</button>
   <button class="glossary-btn" onclick="document.getElementById('model-modal').classList.add('open')">Model</button>
   <button class="glossary-btn" onclick="document.getElementById('glossary-modal').classList.add('open')">Glossary</button>
@@ -708,6 +711,58 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   </div>
 </div>
 
+<!-- Why Perfect Loses Modal -->
+<div class="modal-overlay" id="why-chalk-modal">
+  <div class="modal-backdrop" onclick="document.getElementById('why-chalk-modal').classList.remove('open')"></div>
+  <div class="modal-content" style="max-width:680px;">
+    <button class="modal-close" onclick="document.getElementById('why-chalk-modal').classList.remove('open')">&times;</button>
+    <h2 style="color:#dc3545;">Why Perfect Loses</h2>
+    <p style="font-size:13px;color:#bbb;margin-bottom:20px;line-height:1.6;">BERNS_CHALK always picks the most probable winner in every game. It is the most <em>accurate</em> bracket. So why doesn&rsquo;t it have the highest P(1st place)?</p>
+
+    <div class="gloss-item">
+      <span class="gloss-term">The Core Problem: You Score Relative to the Field</span>
+      <div class="gloss-def">When BERNS_CHALK picks Duke as champion (say, 35% win prob) and Duke wins &mdash; so do the 55% of pool entrants who also picked Duke. You score 320 points. So do they. Your relative gain is <strong style="color:#fff;">zero</strong>. Winning a pool requires maximizing P(your score &gt; everyone else&rsquo;s), not maximizing expected correct picks. These are fundamentally different objectives.</div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">Proof: The 20% Underdog Can Win More Often</span>
+      <div class="gloss-def" style="font-family:monospace;font-size:11px;line-height:1.8;color:#ccc;">
+        10-person pool &bull; 1 championship game &bull; 320 pts<br>
+        Team A: 80% win prob, 90% ownership (9 of 10 pick A)<br>
+        Team B: 20% win prob, 10% ownership (1 of 10 picks B)<br><br>
+        <strong style="color:#fff;">Pick A (BERNS_CHALK):</strong><br>
+        &nbsp;&nbsp;A wins (80%): you share 320 pts with 8 others &rarr; win tiebreak 1/9<br>
+        &nbsp;&nbsp;B wins (20%): you score 0, contrarian scores 320 &rarr; you lose<br>
+        &nbsp;&nbsp;<strong style="color:#dc3545;">P(1st) = 0.80 &times; (1/9) + 0.20 &times; 0 = 8.9%</strong><br><br>
+        <strong style="color:#fff;">Pick B (contrarian):</strong><br>
+        &nbsp;&nbsp;A wins (80%): you score 0 &rarr; you lose<br>
+        &nbsp;&nbsp;B wins (20%): you and 1 opponent share 320 pts &rarr; win tiebreak 1/2<br>
+        &nbsp;&nbsp;<strong style="color:#4caf50;">P(1st) = 0.80 &times; 0 + 0.20 &times; (1/2) = 10.0%</strong>
+      </div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">The General Rule</span>
+      <div class="gloss-def">Pick the underdog when: <strong style="color:#fff;">ownership_A / ownership_B &gt; prob_A / prob_B</strong>. In the example: 90/10 = 9 &gt; 80/20 = 4 &rarr; pick B. This is exactly what <strong style="color:var(--gold);">Leverage</strong> captures: model_prob / public_ownership. When leverage &gt; 1 for the underdog, picking them increases P(1st) even though it decreases expected score.</div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">The Variance Argument</span>
+      <div class="gloss-def">BERNS_CHALK is a low-variance strategy. It scores consistently near the pool average. But &ldquo;slightly above average&rdquo; rarely wins a 25-person pool. The optimizer introduces <em>good variance</em>: EMV-positive upsets that are correlated with leapfrogging the most people at once. When a 4-seed Final Four pick hits, you score 160 pts while ~75% of the field scores 0 on that slot.</div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">More Simulations Don&rsquo;t Change This</span>
+      <div class="gloss-def">More Monte Carlo sims reduce measurement noise &mdash; they converge to the true P(1st). But the true P(1st) for BERNS_CHALK is structurally limited because it picks the same teams as most opponents. It wins when they win, loses when they lose. No amount of simulation changes the underlying math.</div>
+    </div>
+
+    <div class="gloss-item">
+      <span class="gloss-term">The Analogy</span>
+      <div class="gloss-def">BERNS_CHALK is like a stock portfolio that perfectly tracks the index. You&rsquo;ll never dramatically underperform. But you&rsquo;ll never outperform either &mdash; because everyone else is also indexed. To beat the field, you need a concentrated position that the field doesn&rsquo;t have.</div>
+    </div>
+  </div>
+</div>
+
 <!-- Glossary Modal -->
 <div class="modal-overlay" id="glossary-modal">
   <div class="modal-backdrop" onclick="document.getElementById('glossary-modal').classList.remove('open')"></div>
@@ -720,6 +775,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
     <div class="gloss-item"><span class="gloss-term">Barthag</span><div class="gloss-def">From Barttorvik. Estimated probability of beating an average Division I team on a neutral court. 0.95+ is elite.</div></div>
     <div class="gloss-item"><span class="gloss-term">WAB</span><div class="gloss-def">Wins Above Bubble. How many wins above (or below) what a bubble team would achieve against the same schedule. Positive = comfortably in the tournament.</div></div>
     <div class="gloss-item"><span class="gloss-term">Top-25 Record</span><div class="gloss-def">Wins and losses against top-25 ranked opponents. Reveals how a team performs against elite competition.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Seed Advantage</span><div class="gloss-def">Underdog&rsquo;s seed minus favorite&rsquo;s seed (e.g., +7 for a 5-vs-12 matchup). The model&rsquo;s strongest single predictor of upset probability.</div></div>
+    <div class="gloss-item"><span class="gloss-term">AdjEM Gap</span><div class="gloss-def">AdjEM difference (underdog minus favorite). Negative = underdog is less efficient. Used by the upset model alongside seed.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Seed &times; AdjEM Interaction</span><div class="gloss-def">Product of seed gap and AdjEM gap. Captures games where a team is higher-seeded but statistically close (or lower-seeded but overrated).</div></div>
+    <div class="gloss-item"><span class="gloss-term">Barthag Gap</span><div class="gloss-def">Barthag difference (underdog minus favorite). Negative = underdog has a lower probability of beating an average D-I team.</div></div>
+    <div class="gloss-item"><span class="gloss-term">WAB Gap</span><div class="gloss-def">Wins Above Bubble difference (underdog minus favorite). Negative = underdog barely qualified for the tournament.</div></div>
+    <div class="gloss-item"><span class="gloss-term">Top-25 Win% Gap</span><div class="gloss-def">Favorite&rsquo;s top-25 win percentage minus underdog&rsquo;s. Positive = favorite has a stronger resume against elite competition.</div></div>
     <div class="gloss-item"><span class="gloss-term">Leverage</span><div class="gloss-def">Model probability / public ownership. Values &gt;1 mean the public is undervaluing this pick. Higher leverage = more contrarian value if the pick hits.</div></div>
     <div class="gloss-item"><span class="gloss-term">Public %</span><div class="gloss-def">Percentage of Yahoo Bracket Mayhem entrants picking this team to advance to this round. Represents what "the field" is doing.</div></div>
     <div class="gloss-item"><span class="gloss-term">P(1st)</span><div class="gloss-def">Probability this bracket finishes 1st in the pool, estimated via Monte Carlo simulation of thousands of random tournaments against opponent brackets sampled from public ownership.</div></div>
@@ -1159,14 +1220,14 @@ function renderBracket(index) {
 
 const FEATURE_LABELS = {
   seed_diff:          'Seed Advantage',
-  adj_em_diff:        'AdjEM Gap (KenPom)',
+  adj_em_diff:        'AdjEM Gap',
   adj_o_diff:         'Offensive Efficiency',
   adj_t_diff:         'Tempo Differential',
   seed_x_adj_em:      'Seed \u00d7 AdjEM Interaction',
-  top25_winpct_diff:  'Top-25 Win% Edge',
-  dog_top25_winpct:   'Underdog Top-25 Record',
-  barthag_diff:       'Barthag (Win Prob) Gap',
-  wab_diff:           'Wins Above Bubble',
+  top25_winpct_diff:  'Top-25 Win% Gap',
+  dog_top25_winpct:   'Underdog Top-25 Win%',
+  barthag_diff:       'Barthag Gap',
+  wab_diff:           'WAB Gap',
   momentum_diff:      'Momentum Differential',
   dog_momentum:       'Underdog Momentum',
   dog_last10_winpct:  'Underdog Last-10 Win%',
@@ -1272,19 +1333,21 @@ function computeModelPrediction(aName, bName) {
 
   const favIsA = a.seed <= b.seed;
   const fav = favIsA ? a : b, dog = favIsA ? b : a;
-  const sd     = fav.seed  - dog.seed;
-  const aemDiff = (fav.adj_em || 0) - (dog.adj_em || 0);
+  // All differentials are computed as (underdog - favorite), matching features.py.
+  // Exception: top25_winpct_diff = favorite - underdog (see features.py line ~107).
+  const sd      = dog.seed    - fav.seed;               // +15 for 1v16
+  const aemDiff = (dog.adj_em || 0) - (fav.adj_em || 0); // negative for strong fav
 
   const rawFeatures = {
     seed_diff:          sd,
     adj_em_diff:        aemDiff,
-    adj_o_diff:         (fav.adj_o || 0) - (dog.adj_o || 0),
-    adj_t_diff:         (fav.adj_t || 0) - (dog.adj_t || 0),
+    adj_o_diff:         (dog.adj_o || 0) - (fav.adj_o || 0),
+    adj_t_diff:         (dog.adj_t || 0) - (fav.adj_t || 0),
     seed_x_adj_em:      sd * aemDiff,
-    top25_winpct_diff:  safeTop25Pct(fav) - safeTop25Pct(dog),
+    top25_winpct_diff:  safeTop25Pct(fav) - safeTop25Pct(dog),  // fav - dog (exception)
     dog_top25_winpct:   safeTop25Pct(dog),
-    barthag_diff:       (fav.barthag || 0) - (dog.barthag || 0),
-    wab_diff:           (fav.wab || 0) - (dog.wab || 0),
+    barthag_diff:       (dog.barthag || 0) - (fav.barthag || 0),
+    wab_diff:           (dog.wab || 0) - (fav.wab || 0),
     momentum_diff:      0,
     dog_momentum:       0,
     dog_last10_winpct:  0.5,
@@ -1333,10 +1396,18 @@ function updateModelPrediction() {
   }
 
   const aData = TEAMS[aName], bData = TEAMS[bName];
-  const pctA  = (r.pAWins * 100).toFixed(1);
-  const pctB  = (100 - r.pAWins * 100).toFixed(1);
-  const colA  = r.pAWins >= 0.5 ? '#4ade80' : '#f87171';
-  const colB  = r.pAWins <  0.5 ? '#4ade80' : '#f87171';
+  // Use calibrated matchup probability when available (matches bracket "Model win prob")
+  const matchupProb = (MATCHUPS[aName] && MATCHUPS[aName][bName] != null)
+    ? MATCHUPS[aName][bName]
+    : (MATCHUPS[bName] && MATCHUPS[bName][aName] != null)
+      ? 1 - MATCHUPS[bName][aName]
+      : null;
+  const pAWins   = matchupProb != null ? matchupProb : r.pAWins;
+  const calibrated = matchupProb != null;
+  const pctA  = (pAWins * 100).toFixed(1);
+  const pctB  = (100 - pAWins * 100).toFixed(1);
+  const colA  = pAWins >= 0.5 ? '#4ade80' : '#f87171';
+  const colB  = pAWins <  0.5 ? '#4ade80' : '#f87171';
 
   resultEl.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:center;background:#16213e;border-radius:10px;padding:14px 20px;gap:0;">' +
@@ -1351,6 +1422,9 @@ function updateModelPrediction() {
         '<div style="font-size:38px;font-weight:800;color:' + colB + ';line-height:1;">' + pctB + '%</div>' +
         '<div style="font-size:11px;color:#8899aa;margin-top:3px;">' + (bData.conference || '') + ' &middot; ' + bData.record + '</div>' +
       '</div>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#556677;text-align:center;margin-top:6px;">' +
+      (calibrated ? '\u2020 Calibrated ensemble model' : '\u2020 Logistic regression (uncalibrated)') +
     '</div>';
 
   renderFeatureContribs(r, aName, bName, featuresEl);
@@ -1371,7 +1445,9 @@ function renderFeatureContribs(r, aName, bName, container) {
         : aName + ' is the <b style="color:#ccc;">underdog</b>. Green bars push toward ' + aName + ' winning; red bars push toward ' + bName + ' winning.') +
     '</div>';
 
-  const sorted = [...adjusted].sort((a, b) => Math.abs(b.contrib) - Math.abs(a.contrib));
+  const zeroRaw = adjusted.filter(c => c.raw === 0);
+  const nonZero = adjusted.filter(c => c.raw !== 0);
+  const sorted  = [...nonZero].sort((a, b) => Math.abs(b.contrib) - Math.abs(a.contrib));
 
   html += '<div>';
   for (const f of sorted) {
@@ -1398,6 +1474,13 @@ function renderFeatureContribs(r, aName, bName, container) {
       '</div>';
   }
   html += '</div>';
+
+  if (zeroRaw.length > 0) {
+    const zeroNames = zeroRaw.map(c => FEATURE_LABELS[c.name] || c.name).join(', ');
+    html += '<div style="font-size:10px;color:#556677;margin-top:6px;">' +
+      '\u2020 Not shown (zero input): ' + zeroNames + '. Their effect is included in Log-odds below.' +
+    '</div>';
+  }
 
   html +=
     '<div style="font-size:11px;color:#8899aa;border-top:1px solid #1e2d3d;padding-top:8px;margin-top:8px;">' +

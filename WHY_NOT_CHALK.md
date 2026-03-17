@@ -63,6 +63,49 @@ BERNS_CHALK will likely have the **highest expected score** and a solid **P(top 
 
 ---
 
+## Why More Simulations Don't Help BERNS_CHALK
+
+More simulations converge to the true P(1st) — they just measure it more precisely. The true P(1st) for BERNS_CHALK is structurally limited regardless of sim count.
+
+**Proof with a single-game example:**
+
+Simplified pool: 1 game (championship), 10 people, 320 points.
+
+- Team A: 80% win prob, 90% ownership (9 of 10 people pick A)
+- Team B: 20% win prob, 10% ownership (1 of 10 people picks B)
+
+**If you pick A (BERNS_CHALK):**
+- A wins (80%): you and 8 opponents all have 320 pts → you win the tiebreak 1/9 of the time
+- B wins (20%): you have 0, the one contrarian has 320 → you lose
+- **P(1st) = 0.80 × (1/9) + 0.20 × 0 = 8.9%**
+
+**If you pick B (contrarian):**
+- A wins (80%): you have 0, everyone else has 320 → you lose
+- B wins (20%): you and 1 opponent both have 320 → you win 1/2 of the time
+- **P(1st) = 0.80 × 0 + 0.20 × (1/2) = 10.0%**
+
+The 20% underdog has higher P(1st) than the 80% favorite. No amount of simulation changes this — it's a mathematical fact about the ownership distribution.
+
+### The General Condition
+
+Pick B over A when:
+
+```
+ownership_A / ownership_B  >  prob_A / prob_B
+```
+
+i.e., when the public's overconfidence ratio exceeds the true probability ratio. In the example: `90/10 = 9 > 80/20 = 4`. B wins.
+
+This is exactly leverage: `prob_B / ownership_B = 20/10 = 2.0 > 1`. The public is undervaluing B relative to the model.
+
+### What More Sims Actually Do
+
+The Monte Carlo estimates a real quantity. With 3000 sims you might measure BERNS_CHALK's P(1st) as 8.7% ± 0.5%. With 100,000 sims you'd get 8.9% ± 0.1%. The true value is still 8.9% — and the optimizer's bracket is truly at 10%+ regardless of how precisely you measure either one.
+
+More sims reduce **measurement noise**. They cannot change the underlying structure that BERNS_CHALK picks the same teams as most opponents, meaning it wins when they win and loses when they lose.
+
+---
+
 ## Summary
 
 | | BERNS_CHALK | Optimizer Output |

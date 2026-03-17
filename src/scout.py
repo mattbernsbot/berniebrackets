@@ -1122,7 +1122,7 @@ def generate_bracket_from_kenpom(teams: list[Team]) -> BracketStructure:
     
     for region_idx, region in enumerate(region_names):
         slots.append(BracketSlot(slot_id=slot_id, round_num=4, region=region,
-            seed_a=0, seed_b=0, feeds_into=61 if region_idx < 2 else 62))
+            seed_a=0, seed_b=0, feeds_into=61 if region_idx % 2 == 0 else 62))  # East+South vs West+Midwest
         slot_id += 1
     
     for i in range(2):

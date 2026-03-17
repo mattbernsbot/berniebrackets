@@ -36,9 +36,14 @@ def parse_args() -> argparse.Namespace:
     
     # bracket command
     bracket_parser = subparsers.add_parser('bracket', help='Generate output from existing data')
-    
+
     # full command
     full_parser = subparsers.add_parser('full', help='Run complete pipeline (collect → analyze → bracket)')
+
+    # GitHub Pages flag for commands that produce HTML
+    for subparser in [bracket_parser, full_parser]:
+        subparser.add_argument('--update-github-pages', action='store_true',
+                               help='Copy index.html to docs/index.html after generation')
     
     # Global flags (available for all commands)
     for subparser in [collect_parser, analyze_parser, bracket_parser, full_parser]:
@@ -267,7 +272,6 @@ def cmd_bracket(config, brackets=None) -> None:
 def cmd_full(config) -> None:
     """Execute the 'full' command — collect → analyze → bracket."""
     import glob
-    from datetime import datetime, timezone
     logger = logging.getLogger("bracket_optimizer")
     logger.info("Running full pipeline")
     
@@ -289,13 +293,8 @@ def cmd_full(config) -> None:
     
     cmd_collect(config)
     all_brackets = cmd_analyze(config)
-
-    # Set output_dir to results/<timestamp>/ for this run
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
-    config.output_dir = f"results/{timestamp}"
-
     cmd_bracket(config, brackets=all_brackets)
-    
+
     logger.info("✓ Full pipeline complete")
     logger.info(f"Results available in {config.output_dir}/")
 
@@ -341,6 +340,12 @@ def main() -> None:
     # Setup logging
     logger = setup_logging(args.verbose)
     
+    # Commands that produce HTML output always get a fresh timestamped results dir
+    if args.command in ('bracket', 'full'):
+        from datetime import datetime, timezone
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+        config.output_dir = f"results/{timestamp}"
+
     # Dispatch to command
     try:
         if args.command == 'collect':
@@ -363,6 +368,18 @@ def main() -> None:
         if args.verbose:
             raise
         sys.exit(2)
+
+    # GitHub Pages: copy index.html → docs/index.html
+    if getattr(args, 'update_github_pages', False) and args.command in ('bracket', 'full'):
+        import shutil
+        src = os.path.join(config.output_dir, 'index.html')
+        dst = os.path.join('docs', 'index.html')
+        if os.path.exists(src):
+            os.makedirs('docs', exist_ok=True)
+            shutil.copy2(src, dst)
+            logger.info(f"✓ Copied index.html → {dst}")
+        else:
+            logger.warning(f"index.html not found at {src}, skipping GitHub Pages update")
 
 
 if __name__ == "__main__":

@@ -10,3 +10,4 @@ output/
 .env
 node_modules/
 data/upset_model/
+results/

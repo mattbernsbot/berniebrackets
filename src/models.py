@@ -520,7 +520,7 @@ class Config:
     min_contrarian_ff: int = 1
     max_r1_upsets: int = 3
     data_dir: str = "data"
-    output_dir: str = "output"
+    output_dir: str = "results/output"
     kenpom_url: str = "https://kenpom.com"
     espn_bracket_url: str = "https://www.espn.com/mens-college-basketball/bracketology"
     espn_picks_url: str = "https://fantasy.espn.com/tournament-challenge-bracket/"
