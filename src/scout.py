@@ -263,7 +263,7 @@ def scrape_espn_bracket(url: str | None = None, filepath: str | None = None) -> 
             region=region,
             seed_a=0,
             seed_b=0,
-            feeds_into=61 if region_idx < 2 else 62
+            feeds_into=61 if region_idx % 2 == 0 else 62  # East+South vs West+Midwest
         )
         slots.append(slot)
         slot_id += 1
