@@ -24,7 +24,8 @@ def match_team_name(bracket_name: str, kenpom_teams: List[Dict]) -> Optional[Dic
 
 def load_real_bracket(
     bracket_file: str,
-    kenpom_file: str
+    kenpom_file: str,
+    first_four_winners: Optional[List[str]] = None
 ) -> tuple[List[Team], BracketStructure]:
     """Load real bracket and match with KenPom data.
     
@@ -46,12 +47,27 @@ def load_real_bracket(
     
     print(f"Loaded {len(kenpom_teams)} teams from KenPom")
     print(f"Real bracket has {sum(len(t) for t in bracket_data['regions'].values())} teams")
-    
+
+    # Resolve First Four: build set of play-in losers to exclude
+    play_in_losers = set()
+    winners = set(first_four_winners or [])
+    for game in bracket_data.get('play_in', []):
+        team_a, team_b = game['team_a'], game['team_b']
+        if team_a in winners:
+            play_in_losers.add(team_b)
+        elif team_b in winners:
+            play_in_losers.add(team_a)
+        else:
+            # Game not yet played — default to team_a
+            play_in_losers.add(team_b)
+    if play_in_losers:
+        print(f"First Four losers excluded: {play_in_losers}")
+
     # Create team objects
     teams = []
     team_by_name = {}
     unmatched = []
-    
+
     for region_name, region_teams in bracket_data['regions'].items():
         print(f"\n{region_name}:")
         
@@ -59,7 +75,10 @@ def load_real_bracket(
             bracket_name = team_data['team']
             seed = team_data['seed']
             is_play_in = team_data.get('play_in', False)
-            
+
+            if bracket_name in play_in_losers:
+                continue
+
             # Match with KenPom
             kenpom_match = match_team_name(bracket_name, kenpom_teams)
             

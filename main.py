@@ -66,6 +66,8 @@ def parse_args() -> argparse.Namespace:
                              help='Skip Yahoo pick scraping (use seed-based)')
         subparser.add_argument('--no-strict-yahoo', action='store_true',
                              help='Allow seed-based fallback if Yahoo unavailable (TESTING ONLY)')
+        subparser.add_argument('--first-four', type=str, default='',
+                             help='Comma-separated First Four winners (e.g. "Texas,Howard")')
     
     args = parser.parse_args()
     
@@ -147,7 +149,8 @@ def cmd_collect(config) -> None:
             raise DataError("Yahoo Bracket Mayhem data required but unavailable")
         
         # Now load real bracket and match with KenPom
-        teams, bracket = load_real_bracket(real_bracket_file, temp_kenpom_file)
+        ff_winners = [w.strip() for w in config.first_four.split(',') if w.strip()] if getattr(config, 'first_four', '') else []
+        teams, bracket = load_real_bracket(real_bracket_file, temp_kenpom_file, first_four_winners=ff_winners)
 
         # Enrich teams with Torvik (barthag, wab) and LRMC (top25 record)
         from src.enrich import enrich_teams
@@ -329,7 +332,9 @@ def main() -> None:
         cli_overrides['no_yahoo'] = True
     if hasattr(args, 'no_strict_yahoo') and args.no_strict_yahoo:
         cli_overrides['strict_yahoo'] = False
-    
+    if hasattr(args, 'first_four') and args.first_four:
+        cli_overrides['first_four'] = args.first_four
+
     # Load configuration
     try:
         config = load_config(args.config, cli_overrides)
