@@ -582,8 +582,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .selector-group { display: flex; align-items: center; gap: 8px; }
 #winner-selector { min-width: 100px; max-width: 35vw; }
 #bracket-selector { min-width: 160px; max-width: 45vw; }
-.pct-filter { display: flex; align-items: center; gap: 5px; color: #aaa; font-size: 12px; white-space: nowrap; }
-.pct-filter input { width: 58px; padding: 5px 6px; border-radius: 6px; border: 1px solid #444; background: #16213e; color: #fff; font-size: 12px; }
 .header-spacer { flex: 1; }
 .glossary-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #555; background: transparent; color: #ccc; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; }
 .glossary-btn:hover { background: #16213e; color: #fff; border-color: var(--accent); }
@@ -596,7 +594,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   .header select { max-width: 60vw; font-size: 12px; }
   #bracket-selector { min-width: 0; flex: 1 1 auto; }
   #winner-selector { min-width: 0; flex: 1 1 auto; }
-  .pct-filter { width: 100%; }
   .header-btns button { padding: 5px 8px; font-size: 11px; letter-spacing: 0; }
 }
 
@@ -699,12 +696,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <div class="selector-group">
     <select id="winner-selector"></select>
     <select id="bracket-selector"></select>
-    <div class="pct-filter">
-      <label>Min%</label>
-      <input type="number" id="min-pct" step="0.1">
-      <label>Max%</label>
-      <input type="number" id="max-pct" step="0.1">
-    </div>
   </div>
   <div class="header-spacer"></div>
   <div class="header-btns">
@@ -991,22 +982,14 @@ const WINNERS_SORTED = Object.keys(WINNER_INDEX).sort(
 
 function refreshBracketSelector() {
   const winner = document.getElementById('winner-selector').value;
-  const minPct = parseFloat(document.getElementById('min-pct').value) || 0;
-  const maxPct = parseFloat(document.getElementById('max-pct').value) || 100;
-
   let pool = winner === '__all__'
     ? BRACKETS.map((b, i) => ({idx: i, b})).sort((a, z) => z.b.p_first_place - a.b.p_first_place)
     : (WINNER_INDEX[winner] || []);
 
-  const filtered = pool.filter(({b}) => {
-    const pct = b.p_first_place * 100;
-    return pct >= minPct && pct <= maxPct;
-  });
-
   const sel = document.getElementById('bracket-selector');
   const prev = parseInt(sel.value);
   sel.innerHTML = '';
-  filtered.forEach(({idx, b}) => {
+  pool.forEach(({idx, b}) => {
     const tag = ['optimal','safe_alternate','aggressive_alternate'].includes(b.label)
       ? ` [${b.label.toUpperCase()}]` : '';
     const label = winner === '__all__'
@@ -1017,7 +1000,7 @@ function refreshBracketSelector() {
 
   const keep = [...sel.options].find(o => parseInt(o.value) === prev);
   if (keep) { sel.value = prev; }
-  else if (filtered.length > 0) { closeDetail(); renderBracket(filtered[0].idx); }
+  else if (pool.length > 0) { closeDetail(); renderBracket(pool[0].idx); }
 }
 
 function populateSelector() {
@@ -1029,32 +1012,13 @@ function populateSelector() {
     winSel.appendChild(new Option(`${w}  (${max}% max)`, w));
   });
 
-  // Pct inputs — initialize to full range across all brackets
-  const allPcts = BRACKETS.map(b => b.p_first_place * 100);
-  const globalMin = Math.floor(Math.min(...allPcts) * 10) / 10;
-  const globalMax = Math.ceil(Math.max(...allPcts) * 10) / 10;
-  const minIn = document.getElementById('min-pct');
-  const maxIn = document.getElementById('max-pct');
-  minIn.value = globalMin; maxIn.value = globalMax;
-
   document.getElementById('bracket-selector').addEventListener('change', e => {
     closeDetail(); renderBracket(parseInt(e.target.value));
   });
 
   winSel.addEventListener('change', () => {
-    const w = winSel.value;
-    if (w !== '__all__') {
-      const pcts = WINNER_INDEX[w].map(({b}) => b.p_first_place * 100);
-      minIn.value = Math.floor(Math.min(...pcts) * 10) / 10;
-      maxIn.value = Math.ceil(Math.max(...pcts) * 10) / 10;
-    } else {
-      minIn.value = globalMin; maxIn.value = globalMax;
-    }
     refreshBracketSelector();
   });
-
-  minIn.addEventListener('input', refreshBracketSelector);
-  maxIn.addEventListener('input', refreshBracketSelector);
 
   refreshBracketSelector();
 }
