@@ -692,7 +692,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 <body>
 
 <div class="header">
-  <h1>BernieBrackets</h1>
+  <h1><a href="../" style="color:#fff;text-decoration:none;">BernieBrackets</a></h1>
   <div class="selector-group">
     <select id="winner-selector"></select>
     <select id="bracket-selector"></select>

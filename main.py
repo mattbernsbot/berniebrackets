@@ -374,13 +374,15 @@ def main() -> None:
             raise
         sys.exit(2)
 
-    # GitHub Pages: copy index.html → docs/index.html
+    # GitHub Pages: copy index.html → docs/<pool_size>tm/index.html
     if getattr(args, 'update_github_pages', False) and args.command in ('bracket', 'full'):
         import shutil
         src = os.path.join(config.output_dir, 'index.html')
-        dst = os.path.join('docs', 'index.html')
+        subfolder = f"{config.pool_size}tm"
+        dst_dir = os.path.join('docs', subfolder)
+        dst = os.path.join(dst_dir, 'index.html')
         if os.path.exists(src):
-            os.makedirs('docs', exist_ok=True)
+            os.makedirs(dst_dir, exist_ok=True)
             shutil.copy2(src, dst)
             logger.info(f"✓ Copied index.html → {dst}")
         else:
