@@ -577,11 +577,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 /* Header */
 .header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .header h1 { font-size: 20px; font-weight: 700; white-space: nowrap; }
-.header select { padding: 6px 10px; border-radius: 6px; border: 1px solid #444; background: #16213e; color: #fff; font-size: 13px; cursor: pointer; }
+.header select { padding: 6px 10px; border-radius: 6px; border: 1px solid #444; background: #16213e; color: #fff; font-size: 13px; cursor: pointer; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; }
 .header select:focus { outline: 2px solid var(--accent); }
 .selector-group { display: flex; align-items: center; gap: 8px; }
-#winner-selector { min-width: 165px; }
-#bracket-selector { min-width: 260px; }
+#winner-selector { min-width: 100px; max-width: 35vw; }
+#bracket-selector { min-width: 160px; max-width: 45vw; }
 .pct-filter { display: flex; align-items: center; gap: 5px; color: #aaa; font-size: 12px; white-space: nowrap; }
 .pct-filter input { width: 58px; padding: 5px 6px; border-radius: 6px; border: 1px solid #444; background: #16213e; color: #fff; font-size: 12px; }
 .header-spacer { flex: 1; }
@@ -590,7 +590,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .why-chalk-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #dc3545; background: #dc3545; color: #fff; font-size: 12px; cursor: pointer; letter-spacing: 0.5px; font-weight: 600; }
 .why-chalk-btn:hover { background: #bb2d3b; border-color: #bb2d3b; }
 .header-btns { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-@media (max-width: 600px) { .header-btns button { padding: 5px 8px; font-size: 11px; letter-spacing: 0; } }
+@media (max-width: 600px) {
+  .header { padding: 12px 12px; gap: 10px; }
+  .selector-group { flex-wrap: wrap; width: 100%; }
+  .header select { max-width: 60vw; font-size: 12px; }
+  #bracket-selector { min-width: 0; flex: 1 1 auto; }
+  #winner-selector { min-width: 0; flex: 1 1 auto; }
+  .pct-filter { width: 100%; }
+  .header-btns button { padding: 5px 8px; font-size: 11px; letter-spacing: 0; }
+}
 
 /* Stats bar */
 .stats-bar { background: #16213e; color: #e0e0e0; padding: 10px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; }
